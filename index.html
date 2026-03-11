@@ -3,53 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lettore Pulito</title>
+    <title>Lettore Driving Mode</title>
     <script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
     <style>
-        :root { --bg: #fdf6e3; --text: #2c3e50; --accent: #d33682; }
-        body { font-family: 'Georgia', serif; margin: 0; background: var(--bg); color: var(--text); }
+        :root { --bg: #121212; --text: #e0e0e0; --accent: #ff4757; --btn-play: #2ed573; --btn-sec: #1e90ff; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; background: var(--bg); color: var(--text); }
         
         /* Libreria */
         #library-view { padding: 20px; text-align: center; }
         #library { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; margin-top: 20px; }
-        .book-item { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); cursor: pointer; border: 1px solid #eee; transition: 0.2s; }
-        .book-item:active { transform: scale(0.98); }
+        .book-item { background: #1e1e1e; padding: 20px; border-radius: 15px; position: relative; cursor: pointer; border: 1px solid #333; }
+        .delete-btn { position: absolute; top: -5px; right: -5px; background: var(--accent); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; font-weight: bold; cursor: pointer; }
         
         /* Lettore */
-        #reader-view { display: none; padding: 20px; padding-bottom: 200px; }
-        #content-area { max-width: 700px; margin: 0 auto; line-height: 1.8; font-size: 1.15em; }
-        #content-area p { cursor: pointer; padding: 12px; border-radius: 8px; margin: 8px 0; transition: background 0.2s; }
-        #content-area p.reading { background: #fff9c4; border-left: 5px solid var(--accent); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        #reader-view { display: none; padding: 20px; padding-bottom: 300px; }
+        #content-area { max-width: 600px; margin: 0 auto; line-height: 1.6; font-size: 1.2em; }
+        #content-area p { padding: 15px; border-radius: 10px; margin: 10px 0; background: #1e1e1e; }
+        #content-area p.reading { background: #333; border-left: 8px solid var(--btn-play); color: #fff; }
         
-        /* Controlli */
-        #controls { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 20px; box-shadow: 0 -5px 20px rgba(0,0,0,0.1); z-index: 1000; border-radius: 20px 20px 0 0; }
-        .btns { display: flex; justify-content: space-around; gap: 15px; margin-bottom: 15px; }
-        button { flex: 1; padding: 15px; border-radius: 30px; border: none; background: var(--accent); color: white; font-weight: bold; font-size: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .btn-sec { background: #586e75; }
-        select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd; background: #f9f9f9; font-size: 14px; }
-        .back-link { display: inline-block; margin-bottom: 25px; color: var(--accent); text-decoration: none; font-weight: bold; font-size: 1.1em; }
+        /* CONTROLLI GIGANTI (DRIVING MODE) */
+        #controls { position: fixed; bottom: 0; left: 0; right: 0; background: #1a1a1a; padding: 20px; box-shadow: 0 -10px 30px rgba(0,0,0,0.5); z-index: 1000; border-radius: 30px 30px 0 0; }
+        .driving-btns { display: flex; flex-direction: column; gap: 15px; }
+        .main-btns { display: flex; gap: 15px; height: 120px; } /* Altezza maggiorata per l'auto */
+        
+        .big-btn { flex: 1; border-radius: 20px; border: none; color: white; font-weight: 800; font-size: 24px; cursor: pointer; text-transform: uppercase; box-shadow: 0 6px 0 rgba(0,0,0,0.2); }
+        .big-btn:active { transform: translateY(4px); box-shadow: none; }
+        
+        #pauseBtn { background: var(--btn-play); }
+        #markBtn { background: var(--btn-sec); }
+        
+        select { width: 100%; padding: 15px; border-radius: 12px; background: #222; color: white; border: 1px solid #444; margin-bottom: 15px; font-size: 16px; }
+        .back-link { display: block; margin-bottom: 30px; color: #aaa; text-decoration: none; font-weight: bold; font-size: 1.2em; text-align: center; }
     </style>
 </head>
 <body>
 
     <div id="library-view">
-        <h1>📚 La mia Libreria</h1>
+        <h1>🚗 Audio Libreria</h1>
         <div id="library"></div>
-        <button style="position:fixed; bottom:30px; right:30px; width:65px; height:65px; border-radius:50%; font-size:35px;" onclick="document.getElementById('fileInput').click()">+</button>
+        <button style="position:fixed; bottom:30px; right:30px; width:70px; height:70px; border-radius:50%; font-size:40px; background:var(--btn-play); border:none; color:white;" onclick="document.getElementById('fileInput').click()">+</button>
         <input type="file" id="fileInput" style="display:none" accept=".html,.htm,.txt" onchange="importFile(event)">
     </div>
 
     <div id="reader-view">
-        <a href="#" class="back-link" onclick="location.reload()">← Esci dal libro</a>
+        <a href="#" class="back-link" onclick="location.reload()">⬅ ESCI DAL LIBRO</a>
         <div id="content-area"></div>
         
         <div id="controls">
-            <div id="status" style="font-size: 0.85em; text-align: center; margin-bottom: 10px; color: #888; font-style: italic;">Tocca un paragrafo per iniziare</div>
-            <div class="btns">
-                <button class="btn-sec" onclick="saveBookmark()">📌 Segna</button>
-                <button id="pauseBtn" onclick="stopSpeech()">Pausa</button>
-            </div>
             <select id="voiceSelect"></select>
+            <div class="driving-btns">
+                <div class="main-btns">
+                    <button id="markBtn" class="big-btn" onclick="saveBookmark()">📌 SEGNA</button>
+                    <button id="pauseBtn" class="big-btn" onclick="togglePlay()">PAUSA</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -57,6 +64,7 @@
         const synth = window.speechSynthesis;
         let currentBookId = null;
         let lastReadPara = null;
+        let isPaused = false;
 
         function populateVoices() {
             const voices = synth.getVoices();
@@ -64,9 +72,7 @@
             const filtered = voices.filter(v => v.lang.includes('it') || v.lang.includes('en'));
             select.innerHTML = filtered.map(v => `<option value="${v.name}">${v.name} (${v.lang})</option>`).join('');
         }
-        if (speechSynthesis.onvoiceschanged !== undefined) {
-            speechSynthesis.onvoiceschanged = populateVoices;
-        }
+        speechSynthesis.onvoiceschanged = populateVoices;
         populateVoices();
 
         async function importFile(e) {
@@ -87,14 +93,23 @@
                     const b = await localforage.getItem(k);
                     const div = document.createElement('div');
                     div.className = 'book-item';
-                    div.innerHTML = `📖<br><small>${b.title}</small>`;
+                    div.innerHTML = `
+                        <button class="delete-btn" onclick="event.stopPropagation(); deleteBook('${b.id}')">X</button>
+                        📖<br><small>${b.title}</small>
+                    `;
                     div.onclick = () => openBook(b.id);
                     lib.appendChild(div);
                 }
             }
         }
 
-        // --- IL "FILTRO MAGICO" PER PULIRE IL CODICE ---
+        async function deleteBook(id) {
+            if(confirm("Vuoi eliminare questo libro?")) {
+                await localforage.removeItem(id);
+                renderLibrary();
+            }
+        }
+
         async function openBook(id) {
             const b = await localforage.getItem(id);
             currentBookId = id;
@@ -102,39 +117,23 @@
             document.getElementById('reader-view').style.display = 'block';
             
             const area = document.getElementById('content-area');
-            
-            // 1. Usiamo un parser vero per estrarre solo il testo
             const parser = new DOMParser();
             const doc = parser.parseFromString(b.content, 'text/html');
+            const textContent = doc.body.innerText.split('\n').map(p => p.trim()).filter(p => p.length > 5);
             
-            // 2. Rimuoviamo script e stili che sporcano il testo
-            const cleanUp = doc.querySelectorAll('script, style, meta, link');
-            cleanUp.forEach(el => el.remove());
-
-            // 3. Prendiamo solo il testo pulito e lo dividiamo in paragrafi reali
-            // Usiamo il testo del body, diviso per i blocchi di testo che hanno senso
-            const textContent = doc.body.innerText
-                .split('\n')
-                .map(p => p.trim())
-                .filter(p => p.length > 5); // Scartiamo frammenti troppo corti o vuoti
-            
-            area.innerHTML = textContent.map((p, index) => 
-                `<p id="p-${index}" onclick="readParagraph(${index})">${p}</p>`
-            ).join('');
+            area.innerHTML = textContent.map((p, index) => `<p id="p-${index}" onclick="readParagraph(${index})">${p}</p>`).join('');
 
             if (b.savedIndex) {
                 const el = document.getElementById(`p-${b.savedIndex}`);
                 if (el) {
                     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    el.classList.add('reading');
-                    lastReadPara = el;
-                    lastReadPara.index = b.savedIndex;
+                    readParagraph(b.savedIndex); // Inizia subito dal segnalibro
                 }
             }
         }
 
         function readParagraph(index) {
-            stopSpeech();
+            synth.cancel();
             const el = document.getElementById(`p-${index}`);
             if (!el) return;
 
@@ -148,22 +147,25 @@
             utter.voice = synth.getVoices().find(v => v.name === selectedVoiceName);
             
             utter.onend = () => {
-                // Passa al prossimo paragrafo automaticamente
-                const next = index + 1;
-                if (document.getElementById(`p-${next}`)) {
-                    readParagraph(next);
-                    // Scroll automatico per seguire la lettura
-                    document.getElementById(`p-${next}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
+                if(!isPaused) readParagraph(index + 1);
+                document.getElementById(`p-${index+1}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
             };
 
             synth.speak(utter);
-            document.getElementById('status').innerText = "📖 Sto leggendo...";
+            isPaused = false;
+            document.getElementById('pauseBtn').innerText = "PAUSA";
+            document.getElementById('pauseBtn').style.background = "#ff4757";
         }
 
-        function stopSpeech() {
-            synth.cancel();
-            document.getElementById('status').innerText = "⏸ In pausa";
+        function togglePlay() {
+            if (synth.speaking && !isPaused) {
+                synth.cancel();
+                isPaused = true;
+                document.getElementById('pauseBtn').innerText = "RIPRENDI";
+                document.getElementById('pauseBtn').style.background = "#2ed573";
+            } else if (lastReadPara) {
+                readParagraph(lastReadPara.index);
+            }
         }
 
         async function saveBookmark() {
@@ -171,8 +173,9 @@
                 const b = await localforage.getItem(currentBookId);
                 b.savedIndex = lastReadPara.index;
                 await localforage.setItem(currentBookId, b);
-                document.getElementById('status').innerText = "📌 Posizione salvata!";
-                setTimeout(() => { document.getElementById('status').innerText = "In pausa"; }, 2000);
+                const btn = document.getElementById('markBtn');
+                btn.innerText = "SALVATO!";
+                setTimeout(() => btn.innerText = "📌 SEGNA", 2000);
             }
         }
 
