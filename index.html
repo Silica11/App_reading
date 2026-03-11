@@ -3,44 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Il Mio Lettore HTML</title>
+    <title>Lettore HTML Intelligente</title>
     <script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
     <style>
-        :root { --bg: #ffffff; --text: #1a1a1a; --accent: #4285f4; }
-        body { font-family: 'Georgia', serif; margin: 0; background: var(--bg); color: var(--text); line-height: 1.6; }
-        #library { padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
-        .book-item { border: 1px solid #ddd; padding: 15px; border-radius: 10px; cursor: pointer; text-align: center; background: #f9f9f9; }
+        :root { --bg: #fdf6e3; --text: #2c3e50; --accent: #d33682; }
+        body { font-family: 'Georgia', serif; margin: 0; background: var(--bg); color: var(--text); }
         
-        #reader-view { display: none; padding: 20px; padding-bottom: 150px; }
-        #controls { position: fixed; bottom: 0; width: 100%; background: white; border-top: 1px solid #ddd; padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 -5px 15px rgba(0,0,0,0.1); }
-        .btns { display: flex; justify-content: space-around; }
-        button { padding: 12px 25px; border-radius: 25px; border: none; background: var(--accent); color: white; font-weight: bold; font-size: 16px; }
-        .secondary { background: #5f6368; }
-        select { padding: 8px; border-radius: 5px; border: 1px solid #ccc; width: 100%; }
-        .back-btn { margin-bottom: 20px; display: block; color: var(--accent); text-decoration: none; font-weight: bold; }
-        #content-area { font-size: 1.1em; max-width: 800px; margin: 0 auto; }
-        .highlight { background-color: yellow; } /* Evidenzia la frase letta */
+        /* Libreria */
+        #library-view { padding: 20px; }
+        #library { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
+        .book-item { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; cursor: pointer; }
+        
+        /* Lettore */
+        #reader-view { display: none; padding: 20px; padding-bottom: 180px; }
+        #content-area p { cursor: pointer; padding: 5px; border-radius: 5px; transition: 0.3s; margin-bottom: 1em; }
+        #content-area p:hover { background: rgba(0,0,0,0.05); }
+        #content-area p.reading { background: #fff9c4; border-left: 4px solid var(--accent); }
+        
+        /* Controlli */
+        #controls { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 15px; box-shadow: 0 -5px 15px rgba(0,0,0,0.1); z-index: 1000; }
+        .btns { display: flex; justify-content: space-around; gap: 10px; margin-bottom: 10px; }
+        button { flex: 1; padding: 12px; border-radius: 25px; border: none; background: var(--accent); color: white; font-weight: bold; font-size: 14px; }
+        .btn-sec { background: #586e75; }
+        select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; }
+        .back-link { display: block; margin-bottom: 20px; color: var(--accent); text-decoration: none; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div id="library-view">
-        <h2 style="padding: 20px;">I miei Libri</h2>
+        <h2>📚 I miei Libri HTML</h2>
         <div id="library"></div>
-        <button style="position:fixed; bottom:20px; right:20px; width:60px; height:60px; border-radius:50%;" onclick="document.getElementById('fileInput').click()">+</button>
-        <input type="file" id="fileInput" style="display:none" accept=".html,.txt" onchange="importFile(event)">
+        <button style="position:fixed; bottom:20px; right:20px; width:60px; height:60px; border-radius:50%; font-size:30px;" onclick="document.getElementById('fileInput').click()">+</button>
+        <input type="file" id="fileInput" style="display:none" accept=".html" onchange="importFile(event)">
     </div>
 
     <div id="reader-view">
-        <a href="#" class="back-btn" onclick="showLibrary()">← Torna alla Libreria</a>
+        <a href="#" class="back-link" onclick="location.reload()">← Torna alla Libreria</a>
         <div id="content-area"></div>
         
         <div id="controls">
-            <div id="reading-status" style="font-size: 0.8em; text-align: center; color: #666;"></div>
+            <div id="status" style="font-size: 0.8em; text-align: center; margin-bottom: 5px; color: #666;">Tocca un paragrafo per leggere</div>
             <div class="btns">
-                <button class="secondary" onclick="savePosition()">📌 Segna</button>
-                <button id="playBtn" onclick="toggleRead()">Riproduci</button>
-                <button class="secondary" onclick="stopRead()">Stop</button>
+                <button class="btn-sec" onclick="saveBookmark()">📌 Segna</button>
+                <button id="pauseBtn" onclick="stopSpeech()">Pausa</button>
             </div>
             <select id="voiceSelect"></select>
         </div>
@@ -48,27 +54,28 @@
 
     <script>
         const synth = window.speechSynthesis;
-        let voices = [];
         let currentBookId = null;
-        let isPlaying = false;
+        let lastReadPara = null;
 
-        // Caricamento Voci
-        function loadVoices() {
-            voices = synth.getVoices();
+        // 1. Caricamento Voci (migliorato)
+        function populateVoices() {
+            const voices = synth.getVoices();
             const select = document.getElementById('voiceSelect');
             const filtered = voices.filter(v => v.lang.includes('it') || v.lang.includes('en'));
             select.innerHTML = filtered.map(v => `<option value="${v.name}">${v.name} (${v.lang})</option>`).join('');
         }
-        synth.onvoiceschanged = loadVoices;
-        loadVoices();
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = populateVoices;
+        }
+        populateVoices();
 
+        // 2. Importazione
         async function importFile(e) {
             const file = e.target.files[0];
             if (!file) return;
             const text = await file.text();
-            const id = "book_" + Date.now();
-            const book = { id, title: file.name, content: text, lastPos: 0 };
-            await localforage.setItem(id, book);
+            const id = "h_" + Date.now();
+            await localforage.setItem(id, { id, title: file.name, content: text, savedIndex: 0 });
             renderLibrary();
         }
 
@@ -77,73 +84,82 @@
             lib.innerHTML = "";
             const keys = await localforage.keys();
             for (let k of keys) {
-                const b = await localforage.getItem(k);
-                lib.innerHTML += `<div class="book-item" onclick="openBook('${b.id}')">📖<br>${b.title}</div>`;
+                if (k.startsWith("h_")) {
+                    const b = await localforage.getItem(k);
+                    const div = document.createElement('div');
+                    div.className = 'book-item';
+                    div.innerHTML = `📖<br>${b.title}`;
+                    div.onclick = () => openBook(b.id);
+                    lib.appendChild(div);
+                }
             }
         }
 
+        // 3. Apertura Libro con Paragrafizzazione
         async function openBook(id) {
             const b = await localforage.getItem(id);
             currentBookId = id;
             document.getElementById('library-view').style.display = 'none';
             document.getElementById('reader-view').style.display = 'block';
-            const contentArea = document.getElementById('content-area');
-            contentArea.innerHTML = b.content;
             
-            // Scorri fino alla posizione salvata
-            window.scrollTo(0, b.lastPos || 0);
-        }
+            const area = document.getElementById('content-area');
+            
+            // Pulizia e creazione paragrafi
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = b.content;
+            const textContent = tempDiv.innerText.split('\n').filter(p => p.trim().length > 2);
+            
+            area.innerHTML = textContent.map((p, index) => 
+                `<p id="p-${index}" onclick="readParagraph(${index})">${p}</p>`
+            ).join('');
 
-        function showLibrary() {
-            stopRead();
-            document.getElementById('library-view').style.display = 'block';
-            document.getElementById('reader-view').style.display = 'none';
-        }
-
-        function toggleRead() {
-            if (isPlaying) {
-                synth.pause();
-                isPlaying = false;
-                document.getElementById('playBtn').innerText = "Riprendi";
-            } else {
-                if (synth.paused) {
-                    synth.resume();
-                } else {
-                    startReadingFromScroll();
-                }
-                isPlaying = true;
-                document.getElementById('playBtn').innerText = "Pausa";
+            // Vai al segnalibro se esiste
+            if (b.savedIndex) {
+                const el = document.getElementById(`p-${b.savedIndex}`);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         }
 
-        function startReadingFromScroll() {
-            synth.cancel();
-            // Trucco: prendiamo il testo visibile nella parte alta dello schermo
-            const text = document.getElementById('content-area').innerText;
-            // Calcoliamo approssimativamente dove si trova l'utente basandoci sullo scroll
-            const scrollPercent = window.scrollY / document.body.scrollHeight;
-            const startChar = Math.floor(text.length * scrollPercent);
+        // 4. Lettura del Paragrafo
+        function readParagraph(index) {
+            stopSpeech();
             
-            const utter = new SpeechSynthesisUtterance(text.substring(startChar));
-            const selectedVoice = document.getElementById('voiceSelect').value;
-            utter.voice = voices.find(v => v.name === selectedVoice);
-            utter.lang = utter.voice.lang;
-            utter.rate = 1.0;
+            const el = document.getElementById(`p-${index}`);
+            if (!el) return;
+
+            // Evidenziazione
+            if (lastReadPara) lastReadPara.classList.remove('reading');
+            el.classList.add('reading');
+            lastReadPara = el;
+            lastReadPara.index = index; // Salviamo l'indice corrente
+
+            const utter = new SpeechSynthesisUtterance(el.innerText);
+            const selectedVoiceName = document.getElementById('voiceSelect').value;
+            utter.voice = synth.getVoices().find(v => v.name === selectedVoiceName);
+            
+            // Quando finisce questo paragrafo, passa al prossimo!
+            utter.onend = () => {
+                readParagraph(index + 1);
+            };
 
             synth.speak(utter);
+            document.getElementById('status').innerText = "Lettura in corso...";
         }
 
-        function stopRead() {
+        function stopSpeech() {
             synth.cancel();
-            isPlaying = false;
-            document.getElementById('playBtn').innerText = "Riproduci";
+            document.getElementById('status').innerText = "In pausa";
         }
 
-        async function savePosition() {
-            const b = await localforage.getItem(currentBookId);
-            b.lastPos = window.scrollY;
-            await localforage.setItem(currentBookId, b);
-            alert("Posizione salvata!");
+        async function saveBookmark() {
+            if (lastReadPara && currentBookId) {
+                const b = await localforage.getItem(currentBookId);
+                b.savedIndex = lastReadPara.index;
+                await localforage.setItem(currentBookId, b);
+                alert("Posizione salvata al paragrafo corrente!");
+            } else {
+                alert("Tocca un paragrafo prima di segnare la posizione.");
+            }
         }
 
         renderLibrary();
