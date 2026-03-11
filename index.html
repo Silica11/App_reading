@@ -3,13 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Michael Magic Reader 🎀</title>
+    <title>Michael AI Reader 🎀</title>
     <script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
-    <script type="module">
-        // Carichiamo l'IA più recente e stabile
-        import { pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.1';
-        window.pipeline = pipeline;
-    </script>
     <style>
         :root { --bg: #fff0f6; --text: #70133a; --accent: #ff85a2; --btn-pink: #ffc2d1; }
         body { 
@@ -18,60 +13,48 @@
             color: var(--text); overflow-x: hidden;
         }
 
-        /* Schermata Iniziale Caricamento IA */
+        /* Schermata Caricamento IA */
         #loader-ai { 
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: var(--bg); z-index: 9999; display: flex; flex-direction: column; 
             align-items: center; justify-content: center; text-align: center; padding: 20px;
         }
-        .progress-container { width: 80%; max-width: 300px; height: 12px; background: white; border-radius: 10px; border: 2px solid var(--accent); margin-top: 20px; overflow: hidden; }
+        .progress-box { width: 80%; max-width: 300px; height: 15px; background: white; border-radius: 10px; border: 2px solid var(--accent); margin-top: 20px; overflow: hidden; }
         #progress-fill { width: 0%; height: 100%; background: var(--accent); transition: width 0.2s; }
+        #error-log { color: red; font-size: 0.7em; margin-top: 10px; display: none; padding: 10px; }
 
-        /* Home Libreria */
+        /* Libreria */
         #library-view { padding: 20px; text-align: center; }
         #library { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; margin-top: 20px; }
-        .book-item { background: rgba(255, 255, 255, 0.7); padding: 20px; border-radius: 20px; position: relative; border: 2px solid var(--accent); cursor: pointer; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-        .delete-btn { position: absolute; top: -8px; right: -8px; background: #ff4d6d; color: white; border: none; border-radius: 50%; width: 28px; height: 28px; font-weight: bold; z-index: 10; }
+        .book-item { background: rgba(255, 255, 255, 0.7); padding: 20px; border-radius: 20px; position: relative; border: 2px solid var(--accent); cursor: pointer; font-weight: bold; }
+        .delete-btn { position: absolute; top: -8px; right: -8px; background: #ff4d6d; color: white; border: none; border-radius: 50%; width: 28px; height: 28px; font-weight: bold; }
 
-        /* Tasto + */
-        .add-btn { position: fixed; bottom: 30px; right: 30px; width: 70px; height: 70px; border-radius: 50%; font-size: 40px; background: var(--accent); border: 4px solid white; color: white; cursor: pointer; z-index: 2000; box-shadow: 0 5px 15px rgba(255,133,162,0.4); }
-
-        /* Lettore e Testo */
+        /* Lettore */
         #reader-view { display: none; padding: 15px; padding-bottom: 250px; }
-        #content-area { 
-            max-width: 600px; margin: 0 auto; line-height: 1.8; font-size: 1.4em; 
-            font-family: 'Georgia', serif; background: rgba(255, 255, 255, 0.5); 
-            padding: 20px; border-radius: 25px; min-height: 100vh;
-        }
-        .sentence { display: inline; cursor: pointer; padding: 2px 4px; border-radius: 8px; transition: 0.2s; }
+        #content-area { max-width: 600px; margin: 0 auto; line-height: 1.8; font-size: 1.4em; font-family: 'Georgia', serif; background: rgba(255, 255, 255, 0.5); padding: 20px; border-radius: 25px; }
+        .sentence { display: inline; cursor: pointer; padding: 2px 4px; border-radius: 8px; }
         .reading { background: #ffdeeb; border-bottom: 3px solid #ff477e; font-weight: bold; }
 
-        /* Controlli piccoli a sinistra */
-        #controls { 
-            position: fixed; bottom: 20px; left: 15px; width: 220px; 
-            background: rgba(255, 255, 255, 0.98); padding: 10px; z-index: 1000; 
-            border-radius: 20px; box-shadow: 0 8px 25px rgba(255, 133, 162, 0.3); 
-            display: flex; flex-direction: column; gap: 8px;
-        }
+        /* Controlli a sinistra */
+        #controls { position: fixed; bottom: 20px; left: 15px; width: 220px; background: rgba(255, 255, 255, 0.98); padding: 10px; z-index: 1000; border-radius: 20px; box-shadow: 0 8px 25px rgba(255, 133, 162, 0.3); display: flex; flex-direction: column; gap: 8px; }
         .btn-row { display: flex; gap: 8px; width: 100%; }
-        .ui-btn { 
-            flex: 1; padding: 12px 5px; border-radius: 12px; border: 2px solid white; 
-            font-weight: bold; font-size: 11px; cursor: pointer; text-transform: uppercase; 
-            color: var(--text); background: var(--btn-pink); box-shadow: 0 3px 0 var(--accent);
-        }
-        #backBtn { background: #fff; font-size: 10px; padding: 8px; }
+        .ui-btn { flex: 1; padding: 12px 5px; border-radius: 12px; border: 2px solid white; font-weight: bold; font-size: 11px; cursor: pointer; color: var(--text); background: var(--btn-pink); box-shadow: 0 3px 0 var(--accent); text-transform: uppercase; }
+        
+        .add-btn { position: fixed; bottom: 30px; right: 30px; width: 65px; height: 65px; border-radius: 50%; font-size: 35px; background: var(--accent); border: 4px solid white; color: white; z-index: 2000; box-shadow: 0 5px 15px rgba(255,133,162,0.4); }
     </style>
 </head>
 <body>
 
     <div id="loader-ai">
-        <h2 id="status-text">✨ Sto evocando Michael... 🎀</h2>
-        <p>Scarico la voce magica (circa 100MB). <br>Solo la prima volta, porta pazienza! ✨</p>
-        <div class="progress-container"><div id="progress-fill"></div></div>
+        <h2 id="loading-title">✨ Risveglio Michael AI... 🎀</h2>
+        <p id="loading-msg">Sto scaricando la voce di Michael (circa 90MB). <br>Se la barra si ferma, controlla il Wi-Fi! ✨</p>
+        <div class="progress-box"><div id="progress-fill"></div></div>
+        <div id="error-log"></div>
+        <button id="retry-btn" style="display:none; margin-top:20px; padding:10px;" onclick="location.reload()">Riprova</button>
     </div>
 
     <div id="library-view">
-        <h1 style="margin-top: 40px;">✨ My Stories 🎀</h1>
+        <h1 style="margin-top: 40px;">✨ Michael Reader 🎀</h1>
         <div id="library"></div>
         <button class="add-btn" onclick="document.getElementById('fileInput').click()">+</button>
         <input type="file" id="fileInput" style="display:none" accept=".html,.htm,.txt" onchange="importFile(event)">
@@ -80,15 +63,22 @@
     <div id="reader-view">
         <div id="content-area"></div>
         <div id="controls">
-            <button id="backBtn" class="ui-btn" onclick="location.reload()">⬅ TORNA ALLA LIBRERIA ✨</button>
+            <button class="ui-btn" style="background:#fff; font-size:9px;" onclick="location.reload()">⬅ LIBRERIA ✨</button>
             <div class="btn-row">
-                <button id="markBtn" class="ui-btn" onclick="window.saveBookmark()">📌 SEGNA</button>
+                <button class="ui-btn" onclick="window.saveBookmark()">📌 SEGNA</button>
                 <button id="pauseBtn" class="ui-btn" onclick="window.togglePlay()">PAUSA 🎀</button>
             </div>
         </div>
     </div>
 
     <script type="module">
+        // Usiamo un CDN super affidabile per Transformers.js
+        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.1';
+        
+        // Configuriamo l'ambiente per essere più permissivo con i download
+        env.allowLocalModels = false;
+        env.useBrowserCache = true;
+
         let tts;
         let currentBookId = null;
         let lastReadIdx = -1;
@@ -96,10 +86,10 @@
         let sentences = [];
         let audio = new Audio();
 
-        // 1. CARICAMENTO MODELLO KOKORO
-        async function loadEngine() {
+        async function initAI() {
             try {
-                tts = await window.pipeline('text-to-speech', 'Xenova/kokoro-82M', {
+                // Carichiamo il modello specifico di Kokoro
+                tts = await pipeline('text-to-speech', 'Xenova/kokoro-82M', {
                     progress_callback: (p) => {
                         if (p.status === 'progress') {
                             document.getElementById('progress-fill').style.width = p.progress + '%';
@@ -109,8 +99,12 @@
                 document.getElementById('loader-ai').style.display = 'none';
                 renderLibrary();
             } catch (err) {
-                document.getElementById('status-text').innerText = "Errore! Ricarica la pagina. ✨";
                 console.error(err);
+                document.getElementById('loading-title').innerText = "Ops! C'è stato un intoppo.";
+                document.getElementById('loading-msg').innerText = "Il download è fallito. Assicurati di non essere in modalità Incognito e di avere spazio sul telefono.";
+                document.getElementById('error-log').style.display = 'block';
+                document.getElementById('error-log').innerText = err.message;
+                document.getElementById('retry-btn').style.display = 'block';
             }
         }
 
@@ -127,7 +121,7 @@
             const lib = document.getElementById('library');
             const keys = await localforage.keys();
             const bKeys = keys.filter(k => k.startsWith("bk_"));
-            lib.innerHTML = bKeys.length === 0 ? "<p>Tocca + per aggiungere un libro! 🎀</p>" : "";
+            lib.innerHTML = bKeys.length === 0 ? "<p>Tocca + per iniziare 🎀</p>" : "";
             for (let k of bKeys) {
                 const b = await localforage.getItem(k);
                 const div = document.createElement('div');
@@ -147,77 +141,58 @@
             currentBookId = id;
             document.getElementById('library-view').style.display = 'none';
             document.getElementById('reader-view').style.display = 'block';
-            
             const parser = new DOMParser();
             const doc = parser.parseFromString(b.content, 'text/html');
             const fullText = doc.body.innerText;
-            
             sentences = fullText.match(/[^.!?]+[.!?]+|\n/g) || [fullText];
             sentences = sentences.map(s => s.trim()).filter(s => s.length > 2);
-
-            const area = document.getElementById('content-area');
-            area.innerHTML = sentences.map((s, i) => `<span id="s-${i}" class="sentence" onclick="window.readFrom(${i})">${s} </span>`).join('');
-
+            document.getElementById('content-area').innerHTML = sentences.map((s, i) => `<span id="s-${i}" class="sentence" onclick="window.readFrom(${i})">${s} </span>`).join('');
             if (b.savedIndex) {
                 lastReadIdx = b.savedIndex;
-                setTimeout(() => {
-                    const el = document.getElementById(`s-${lastReadIdx}`);
-                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 400);
+                setTimeout(() => document.getElementById(`s-${lastReadIdx}`).scrollIntoView({ behavior: 'smooth', block: 'center' }), 400);
             }
         }
 
-        // 2. FUNZIONE DI LETTURA CON VOCE MICHAEL
         window.readFrom = async (index) => {
             audio.pause();
             isPaused = false;
             if (index >= sentences.length) return;
-
             const el = document.getElementById(`s-${index}`);
             document.querySelectorAll('.sentence').forEach(s => s.classList.remove('reading'));
             if (el) el.classList.add('reading');
             lastReadIdx = index;
 
-            // Generazione Audio AI con Michael
             try {
+                // Utilizzo esplicito della voce Michael
                 const output = await tts(sentences[index], { voice: 'am_michael' });
                 const blob = new Blob([output.audio], { type: 'audio/wav' });
                 audio.src = URL.createObjectURL(blob);
                 audio.play();
-
                 audio.onended = () => {
                     if (!isPaused) window.readFrom(index + 1);
-                    if (index % 2 === 0) {
-                        const nextEl = document.getElementById(`s-${index+1}`);
-                        if (nextEl) nextEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
+                    if (index % 2 === 0) document.getElementById(`s-${index+1}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
                 };
                 document.getElementById('pauseBtn').innerText = "PAUSA 🎀";
             } catch (err) {
-                console.error("Errore TTS:", err);
+                console.error("Errore Michael:", err);
             }
         }
 
         window.togglePlay = () => {
-            if (!audio.paused) {
-                audio.pause();
-                isPaused = true;
-                document.getElementById('pauseBtn').innerText = "RIPRENDI ✨";
-            } else if (lastReadIdx !== -1) {
-                window.readFrom(lastReadIdx);
-            }
+            if (!audio.paused) { audio.pause(); isPaused = true; document.getElementById('pauseBtn').innerText = "RIPRENDI ✨"; }
+            else if (lastReadIdx !== -1) window.readFrom(lastReadIdx);
         };
 
         window.saveBookmark = async () => {
-            if (lastReadIdx !== -1 && currentBookId) {
+            if (lastReadIdx !== -1) {
                 const b = await localforage.getItem(currentBookId);
                 b.savedIndex = lastReadIdx;
                 await localforage.setItem(currentBookId, b);
-                alert("Posizione salvata! 📌");
+                alert("Segnalibro salvato! 📌");
             }
         };
 
-        loadEngine();
+        initAI();
     </script>
 </body>
 </html>
