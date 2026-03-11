@@ -126,46 +126,41 @@
         }
 
         // LETTURA STABILE
-       function readSentence(index) {
-    synth.cancel();
-    const el = document.getElementById(`s-${index}`);
-    if (!el) return;
+        function readSentence(index) {
+            synth.cancel();
+            const el = document.getElementById(`s-${index}`);
+            if (!el) return;
+            document.querySelectorAll('.sentence').forEach(s => s.classList.remove('reading'));
+            el.classList.add('reading');
+            lastReadIdx = index;
 
-    document.querySelectorAll('.sentence').forEach(s => s.classList.remove('reading'));
-    el.classList.add('reading');
-    lastReadIdx = index;
+            const utter = new SpeechSynthesisUtterance(sentences[index]);
+            utter.lang = 'it-IT';
+            // Prova a forzare una voce maschile se disponibile
+            const voices = synth.getVoices();
+            const maleVoice = voices.find(v => v.lang.includes('it') && (v.name.includes('Male') || v.name.includes('Luca') || v.name.includes('Vittorio')));
+            if (maleVoice) utter.voice = maleVoice;
 
-    const utter = new SpeechSynthesisUtterance(sentences[index]);
-    
-    // --- IL TRUCCO PER SHERPA-ONNX ---
-    const voices = synth.getVoices();
-    // Cerchiamo la voce che si chiama Sherpa o Riccardo
-    const michaelVoice = voices.find(v => 
-        v.name.toLowerCase().includes('sherpa') || 
-        v.name.toLowerCase().includes('riccardo')
-    );
+            utter.onend = () => { if(!isPaused) readSentence(index + 1); };
+            synth.speak(utter);
+            isPaused = false;
+            document.getElementById('pauseBtn').innerText = "PAUSA 🎀";
+            if (index % 2 === 0) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
 
-    if (michaelVoice) {
-        utter.voice = michaelVoice; // Forza l'uso di Riccardo/Michael
-    } else {
-        utter.lang = 'it-IT'; // Fallback se non lo trova
-    }
-    // ---------------------------------
-
-    utter.onend = () => {
-        if(!isPaused) {
-            const next = index + 1;
-            if (sentences[next]) {
-                readSentence(next);
-                if (next % 2 === 0) document.getElementById(`s-${next}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
+        function togglePlay() {
+            if (synth.speaking && !isPaused) {
+                synth.pause();
+                isPaused = true;
+                document.getElementById('pauseBtn').innerText = "RIPRENDI ✨";
+            } else if (isPaused) {
+                synth.resume();
+                isPaused = false;
+                document.getElementById('pauseBtn').innerText = "PAUSA 🎀";
+            } else if (lastReadIdx !== -1) {
+                readSentence(lastReadIdx);
             }
         }
-    };
-
-    synth.speak(utter);
-    isPaused = false;
-    document.getElementById('pauseBtn').innerText = "PAUSA 🎀";
-}
 
         async function saveBookmark() {
             if (lastReadIdx !== -1) {
