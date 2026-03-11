@@ -3,78 +3,174 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mio Audio-Ebook</title>
+    <title>Mio Lettore eBook</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/epub.js/0.3.88/epub.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
     <style>
-        /* Stile Minimalista Kindle-style */
-        body { font-family: sans-serif; margin: 0; background: #f4f4f4; }
-        #library { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 20px; padding: 20px; }
-        .book-card { background: white; padding: 10px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
-        .book-card img { width: 100%; border-radius: 4px; }
-        #player { display: none; position: fixed; bottom: 0; width: 100%; background: white; padding: 20px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); text-align: center; }
-        button { padding: 10px 20px; font-size: 16px; margin: 5px; border-radius: 50px; border: none; background: #007bff; color: white; }
+        :root { --primary: #2c3e50; --accent: #3498db; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f8f9fa; color: var(--primary); }
+        
+        /* Griglia Libreria */
+        #library { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 20px; padding: 20px; padding-bottom: 120px; }
+        .book-card { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); cursor: pointer; transition: 0.2s; }
+        .book-card:active { transform: scale(0.95); }
+        .book-card img { width: 100%; height: 200px; object-fit: cover; background: #eee; }
+        .book-card p { padding: 8px; font-size: 0.9em; font-weight: bold; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* Player Fisso in basso */
+        #player { position: fixed; bottom: 0; width: 100%; background: white; box-shadow: 0 -4px 15px rgba(0,0,0,0.1); padding: 15px; display: none; box-sizing: border-box; z-index: 100; }
+        .controls { display: flex; justify-content: space-around; align-items: center; margin-bottom: 10px; }
+        button { border: none; background: var(--accent); color: white; padding: 12px 20px; border-radius: 25px; font-weight: bold; }
+        button:disabled { background: #ccc; }
+        
+        select { width: 100%; padding: 8px; border-radius: 5px; margin-top: 10px; }
+        .add-btn { background: #2ecc71; position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; border-radius: 50%; font-size: 30px; z-index: 110; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
     </style>
 </head>
 <body>
 
     <div id="library">
-        <div class="book-card" onclick="document.getElementById('fileInput').click()">
-            <div style="height: 150px; display: flex; align-items: center; justify-content: center; border: 2px dashed #ccc;">+ Aggiungi Libro</div>
         </div>
-    </div>
-    
+
+    <button class="add-btn" onclick="document.getElementById('fileInput').click()">+</button>
     <input type="file" id="fileInput" style="display:none" accept=".epub" onchange="handleFileUpload(event)">
 
     <div id="player">
-        <h3 id="bookTitle">Titolo Libro</h3>
-        <button onclick="togglePlay()">Play/Pausa</button>
-        <button onclick="stopReading()">Stop</button>
-        <button onclick="saveBookmark()" style="background: #28a745;">Segna Riga</button>
-        <p id="status">Pronto per leggere...</p>
+        <div id="now-playing" style="font-size: 0.8em; margin-bottom: 10px; text-align: center; color: #666;"></div>
+        <div class="controls">
+            <button onclick="saveBookmark()">📌 Segna</button>
+            <button id="playBtn" onclick="togglePlay()" style="background: #e67e22; width: 100px;">Play</button>
+            <button onclick="stopReading()" style="background: #e74c3c;">Stop</button>
+        </div>
+        <select id="voiceSelect"><option>Caricamento voci...</option></select>
     </div>
 
     <script>
         let currentBook = null;
-        let synthesis = window.speechSynthesis;
+        let rendition = null;
+        let speech = window.speechSynthesis;
         let utterance = new SpeechSynthesisUtterance();
-        utterance.lang = 'it-IT'; // Imposta italiano di default
+        let isReading = false;
 
-        // Caricamento del file
+        // Inizializza voci
+        function loadVoices() {
+            const voices = speech.getVoices();
+            const select = document.getElementById('voiceSelect');
+            select.innerHTML = voices
+                .filter(v => v.lang.includes('it') || v.lang.includes('en'))
+                .map(v => `<option value="${v.name}">${v.name} (${v.lang})</option>`).join('');
+        }
+        speech.onvoiceschanged = loadVoices;
+
+        // Gestione Caricamento Libro
         async function handleFileUpload(event) {
             const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = async (e) => {
-                    const data = e.target.result;
-                    // Salva nel database locale (opzionale per persistenza)
-                    await localforage.setItem(file.name, data);
-                    renderLibrary();
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const arrayBuffer = e.target.result;
+                const book = ePub(arrayBuffer);
+                const metadata = await book.loaded.metadata;
+                const coverUrl = await book.coverUrl();
+
+                const bookData = {
+                    id: Date.now(),
+                    title: metadata.title,
+                    cover: coverUrl,
+                    content: arrayBuffer,
+                    cfi: '' // Posizione salvata
                 };
-                reader.readAsArrayBuffer(file);
+
+                await localforage.setItem('book_' + bookData.id, bookData);
+                renderLibrary();
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // Mostra i libri salvati
+        async function renderLibrary() {
+            const lib = document.getElementById('library');
+            lib.innerHTML = '';
+            const keys = await localforage.keys();
+            
+            for (let key of keys) {
+                if (key.startsWith('book_')) {
+                    const book = await localforage.getItem(key);
+                    const div = document.createElement('div');
+                    div.className = 'book-card';
+                    div.onclick = () => openBook(book);
+                    div.innerHTML = `
+                        <img src="${book.cover || 'https://via.placeholder.com/150'}" alt="cover">
+                        <p>${book.title}</p>
+                    `;
+                    lib.appendChild(div);
+                }
             }
         }
 
-        // Funzione per leggere il testo della "riga" corrente
-        function speakText(text) {
-            synthesis.cancel(); // Ferma letture precedenti
-            utterance.text = text;
-            synthesis.speak(utterance);
-        }
-
-        function togglePlay() {
-            if (synthesis.speaking) {
-                synthesis.paused ? synthesis.resume() : synthesis.pause();
+        // Apri il libro nel player
+        async function openBook(bookData) {
+            document.getElementById('player').style.display = 'block';
+            document.getElementById('now-playing').innerText = "In lettura: " + bookData.title;
+            currentBook = ePub(bookData.content);
+            rendition = currentBook.renderTo(document.createElement('div')); // Render invisibile
+            
+            // Se c'è un segnalibro, caricalo
+            const savedCfi = bookData.cfi;
+            if (savedCfi) {
+                await rendition.display(savedCfi);
             } else {
-                // Qui andrebbe la logica per estrarre il testo dal punto salvato
-                speakText("Inizio della lettura del tuo fantastico libro...");
+                await rendition.display();
+            }
+            
+            window.currentBookData = bookData;
+        }
+
+        // Funzione Play/Pausa
+        async function togglePlay() {
+            if (isReading) {
+                speech.pause();
+                document.getElementById('playBtn').innerText = "Riprendi";
+                isReading = false;
+            } else {
+                if (speech.paused) {
+                    speech.resume();
+                } else {
+                    readVisibleText();
+                }
+                document.getElementById('playBtn').innerText = "Pausa";
+                isReading = true;
             }
         }
 
-        function saveBookmark() {
-            alert("Posizione salvata!");
-            // Qui salveremo il CFI (identificatore di posizione) di Epub.js
+        async function readVisibleText() {
+            const section = rendition.currentLocation().start;
+            const text = await currentBook.load(section.href).then(doc => doc.body.innerText);
+            
+            // Pulizia testo e invio a sintesi vocale
+            utterance.text = text.substring(0, 5000); // Legge blocchi di testo
+            const selectedVoice = document.getElementById('voiceSelect').value;
+            utterance.voice = speech.getVoices().find(v => v.name === selectedVoice);
+            utterance.lang = utterance.voice.lang;
+            
+            speech.speak(utterance);
         }
+
+        function stopReading() {
+            speech.cancel();
+            isReading = false;
+            document.getElementById('playBtn').innerText = "Play";
+        }
+
+        async function saveBookmark() {
+            const cfi = rendition.currentLocation().start.cfi;
+            window.currentBookData.cfi = cfi;
+            await localforage.setItem('book_' + window.currentBookData.id, window.currentBookData);
+            alert("Posizione salvata con successo!");
+        }
+
+        renderLibrary();
     </script>
 </body>
 </html>
