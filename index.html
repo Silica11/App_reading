@@ -15,7 +15,7 @@
         }
         
         body { 
-            font-family: 'Segoe UI', cursive, sans-serif; 
+            font-family: 'Segoe UI', sans-serif; 
             margin: 0; 
             background: var(--bg); 
             color: var(--text);
@@ -48,12 +48,13 @@
         /* Lettore */
         #reader-view { display: none; padding: 20px; padding-bottom: 280px; }
         
-        /* TESTO MOLTO GRANDE */
+        /* TESTO AGGIORNATO: GEORGIA E PIÙ GRANDE */
         #content-area { 
             max-width: 650px; 
             margin: 0 auto; 
             line-height: 1.6; 
-            font-size: 1.5em; /* Ingrandito come richiesto */
+            font-family: 'Georgia', serif; /* Cambiato in Georgia */
+            font-size: 1.7em; /* Aumentato di 2pt (circa 0.2em) */
             font-weight: 500;
         }
         
@@ -68,7 +69,7 @@
             border-bottom: 3px solid #ff477e;
         }
         
-        /* CONTROLLI DRIVING MODE (Più compatti ma giganti) */
+        /* CONTROLLI DRIVING MODE */
         #controls { 
             position: fixed; bottom: 0; left: 0; right: 0; 
             background: rgba(255, 255, 255, 0.9); 
@@ -201,7 +202,6 @@
             lastReadIdx = index;
 
             const utter = new SpeechSynthesisUtterance(sentences[index]);
-            // Usa la voce predefinita del sistema (quella che hai scelto tu)
             utter.lang = 'it-IT';
             
             utter.onend = () => {
