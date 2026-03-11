@@ -22,9 +22,20 @@
         /* Aggiunto supporto per immagine di sfondo nella cella */
         .book-item { 
             background: rgba(255, 255, 255, 0.7); 
-            padding: 15px; border-radius: 15px; position: relative; border: 2px solid var(--accent); 
-            background-size: cover; background-position: center; height: 160px;
-            display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
+            padding: 15px; 
+            border-radius: 12px; 
+            position: relative; 
+            border: 2px solid var(--accent); 
+            background-size: cover; 
+            background-position: center; 
+            /* Rende il riquadro verticale (rapporto 2:3 tipico dei libri) */
+            height: 240px; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center;
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
         .delete-btn { position: absolute; top: -5px; right: -5px; background: #ff4d6d; color: white; border: none; border-radius: 50%; width: 25px; height: 25px; font-weight: bold; z-index: 10; }
         
