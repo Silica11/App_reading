@@ -3,110 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Riccardo Piper Reader 🎀</title>
+    <title>Magical Reader 🎀</title>
     <script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
-    <script type="module">
-        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.1';
-        window.pipeline = pipeline;
-        // Ottimizzazione per scaricare il modello una volta sola
-        env.allowLocalModels = false;
-        env.useBrowserCache = true;
-    </script>
     <style>
-        :root { 
-            --bg: #fff0f6; 
-            --text: #ad1457; 
-            --accent: #ff85a2; 
-            --btn-pink: #ffb3c6; 
-            --btn-blue: #e3f2fd;
-        }
+        :root { --bg: #fff0f6; --text: #ad1457; --accent: #ff85a2; --btn-pink: #ffb3c6; }
         
+        * { box-sizing: border-box; } /* Impedisce ai bottoni di uscire dallo schermo */
+
         body { 
-            font-family: 'Segoe UI', sans-serif; 
-            margin: 0; 
-            background: var(--bg); 
-            color: var(--text);
+            font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); color: var(--text);
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Ctext y='30' x='10' font-size='20' opacity='0.3'%3E✨%3C/text%3E%3Ctext y='80' x='60' font-size='20' opacity='0.3'%3E🎀%3C/text%3E%3C/svg%3E");
-            overflow-x: hidden;
         }
 
         /* LIBRERIA */
         #library-view { padding: 20px; text-align: center; }
-        #library { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
-            gap: 20px; 
-            max-width: 1000px; 
-            margin: 20px auto; 
-        }
-        .book-item { background: rgba(255, 255, 255, 0.7); padding: 30px; border-radius: 20px; position: relative; border: 2px solid var(--accent); cursor: pointer; font-weight: bold; font-size: 1.1em; }
-        .delete-btn { position: absolute; top: -10px; right: -10px; background: #ff4d6d; color: white; border: none; border-radius: 50%; width: 35px; height: 35px; font-weight: bold; cursor: pointer; }
-        
-        /* TASTO AGGIUNGI (Il tuo preferito) */
-        .add-btn { position: fixed; bottom: 30px; right: 30px; width: 70px; height: 70px; border-radius: 50%; font-size: 40px; background: var(--accent); border: 4px solid white; color: white; cursor: pointer; z-index: 2000; box-shadow: 0 4px 15px rgba(255, 133, 162, 0.4); }
+        #library { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; margin-top: 20px; }
+        .book-item { background: rgba(255, 255, 255, 0.7); padding: 20px; border-radius: 20px; position: relative; border: 2px solid var(--accent); cursor: pointer; }
+        .delete-btn { position: absolute; top: -5px; right: -5px; background: #ff4d6d; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; font-weight: bold; }
+        .add-btn { position: fixed; bottom: 30px; right: 30px; width: 70px; height: 70px; border-radius: 50%; font-size: 40px; background: var(--accent); border: 4px solid white; color: white; cursor: pointer; z-index: 2000; }
 
-        /* LETTORE SIMMETRICO */
-        #reader-view { display: none; padding: 20px; padding-bottom: 600px; }
+        /* LETTORE */
+        #reader-view { display: none; padding: 20px; padding-bottom: 550px; }
         #content-area { 
-            width: 95%; 
-            max-width: 600px; 
-            margin: 0 auto; 
-            line-height: 1.7; 
-            font-family: 'Georgia', serif; 
-            font-size: 1.7em; 
-            font-weight: 500;
-            text-align: left;
+            max-width: 600px; margin: 0 auto; line-height: 1.6; 
+            font-family: 'Georgia', serif; font-size: 1.7em; font-weight: 500; 
         }
-        .sentence { display: inline; cursor: pointer; padding: 2px 4px; border-radius: 8px; transition: 0.3s; }
+        .sentence { display: inline; cursor: pointer; padding: 4px; border-radius: 10px; transition: 0.3s; }
         .reading { background: #ffdeeb; color: #880e4f; border-bottom: 3px solid #ff477e; }
 
-        /* CONTROLLI FISSI, SIMMETRICI E IMPILATI */
-        #controls { 
-            position: fixed; 
-            bottom: 0; 
-            left: 50%; 
-            transform: translateX(-50%); 
-            width: 100%; 
-            max-width: 600px; 
-            background: white; 
-            z-index: 1000; 
-            display: flex; 
-            flex-direction: column;
-            border-top: 2px solid var(--accent);
-        }
+        /* CONTROLLI IMPILATI */
+        #controls { position: fixed; bottom: 0; left: 0; width: 100%; background: white; z-index: 1000; display: flex; flex-direction: column; border-top: 2px solid var(--accent); }
+        .ui-btn { width: 100%; border: none; font-weight: 900; text-transform: uppercase; cursor: pointer; color: var(--text); display: flex; align-items: center; justify-content: center; }
         
-        .ui-btn { 
-            width: 100%; 
-            border: none; 
-            font-weight: 900; 
-            text-transform: uppercase; 
-            cursor: pointer; 
-            color: var(--text);
-            display: flex; 
-            align-items: center; 
-            justify-content: center;
-        }
-
-        #backBtn { height: 100px; background: #fff; font-size: 22px; border-bottom: 3px solid var(--bg); }
-        #markBtn { height: 150px; background: #e3f2fd; color: #1976d2; font-size: 22px; border-bottom: 5px solid var(--bg); }
+        #backBtn { height: 100px; background: #fff; font-size: 22px; border-bottom: 2px solid var(--bg); }
+        #markBtn { height: 150px; background: #e3f2fd; color: #1976d2; font-size: 22px; border-bottom: 2px solid var(--bg); }
         #pauseBtn { height: 150px; background: var(--btn-pink); font-size: 22px; }
-
-        /* LOADER AI */
-        #loader-ai { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; }
-        .progress-bar { width: 80%; max-width: 300px; height: 10px; background: white; border-radius: 5px; border: 2px solid var(--accent); margin-top: 15px; overflow: hidden; }
-        #progress-fill { width: 0%; height: 100%; background: var(--accent); transition: width 0.2s; }
+        
+        #voiceSelect { width: 100%; padding: 10px; border: none; background: #fff0f6; color: var(--text); font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div id="loader-ai">
-        <h2>✨ Download Riccardo (Piper)... 🎀</h2>
-        <p>Sto caricando la voce maschile.<br>Solo la prima volta! ✨</p>
-        <div class="progress-bar"><div id="progress-fill"></div></div>
-    </div>
-
     <div id="library-view">
-        <h1>✨ My Library 🎀</h1>
+        <h1>✨ Le Mie Storie 🎀</h1>
         <div id="library"></div>
         <button class="add-btn" onclick="document.getElementById('fileInput').click()">+</button>
         <input type="file" id="fileInput" style="display:none" accept=".html" onchange="importFile(event)">
@@ -115,39 +54,28 @@
     <div id="reader-view">
         <div id="content-area"></div>
         <div id="controls">
-            <button id="backBtn" class="ui-btn" onclick="location.reload()">⬅ TORNA ALLA LIBRERIA</button>
-            <button id="markBtn" class="ui-btn" onclick="window.saveBookmark()">📌 SEGNA POSIZIONE</button>
-            <button id="pauseBtn" class="ui-btn" onclick="window.togglePlay()">PAUSA / PLAY 🎀</button>
+            <select id="voiceSelect"></select> <button id="backBtn" class="ui-btn" onclick="location.reload()">⬅ LIBRERIA ✨</button>
+            <button id="markBtn" class="ui-btn" onclick="saveBookmark()">📌 SEGNA</button>
+            <button id="pauseBtn" class="ui-btn" onclick="togglePlay()">PAUSA 🎀</button>
         </div>
     </div>
 
-    <script type="module">
-        let tts = null;
-        let audio = new Audio();
+    <script>
+        const synth = window.speechSynthesis;
         let currentBookId = null;
         let lastReadIdx = -1;
         let isPaused = false;
         let sentences = [];
 
-        // 1. CARICAMENTO PIPER RICCARDO
-        async function initAI() {
-            try {
-                // Carichiamo Riccardo (Piper) ottimizzato per il web
-                tts = await window.pipeline('text-to-speech', 'Xenova/piper-it_IT-riccardo-x_low', {
-                    progress_callback: (p) => {
-                        if (p.status === 'progress') {
-                            document.getElementById('progress-fill').style.width = p.progress + '%';
-                        }
-                    }
-                });
-                document.getElementById('loader-ai').style.display = 'none';
-                renderLibrary();
-            } catch (e) {
-                console.error(e);
-                document.getElementById('loader-ai').style.display = 'none';
-                renderLibrary();
-            }
+        // Carica le voci del telefono nel menu
+        function populateVoices() {
+            const voices = synth.getVoices();
+            const select = document.getElementById('voiceSelect');
+            const itVoices = voices.filter(v => v.lang.includes('it'));
+            select.innerHTML = itVoices.map(v => `<option value="${v.name}">${v.name}</option>`).join('');
         }
+        synth.onvoiceschanged = populateVoices;
+        setTimeout(populateVoices, 500);
 
         async function importFile(e) {
             const file = e.target.files[0];
@@ -160,20 +88,23 @@
 
         async function renderLibrary() {
             const lib = document.getElementById('library');
+            lib.innerHTML = "";
             const keys = await localforage.keys();
-            const bKeys = keys.filter(k => k.startsWith("h_"));
-            lib.innerHTML = bKeys.length === 0 ? "Tocca + per iniziare 🎀" : "";
-            for (let k of bKeys) {
+            const bookKeys = keys.filter(k => k.startsWith("h_"));
+            if (bookKeys.length === 0) lib.innerHTML = "Aggiungi un libro con il tasto + 🎀";
+            for (let k of bookKeys) {
                 const b = await localforage.getItem(k);
                 const div = document.createElement('div');
                 div.className = 'book-item';
-                div.innerHTML = `<button class="delete-btn" onclick="event.stopPropagation(); window.del('${b.id}')">×</button>📖<br>${b.title}`;
+                div.innerHTML = `<button class="delete-btn" onclick="event.stopPropagation(); deleteBook('${b.id}')">X</button>🎀<br><small>${b.title}</small>`;
                 div.onclick = () => openBook(b.id);
                 lib.appendChild(div);
             }
         }
 
-        window.del = async (id) => { if(confirm("Eliminare? ✨")) { await localforage.removeItem(id); renderLibrary(); } };
+        async function deleteBook(id) {
+            if(confirm("Eliminare? ✨")) { await localforage.removeItem(id); renderLibrary(); }
+        }
 
         async function openBook(id) {
             const b = await localforage.getItem(id);
@@ -184,55 +115,56 @@
             const doc = parser.parseFromString(b.content, 'text/html');
             const fullText = doc.body.innerText;
             sentences = fullText.match(/[^.!?]+[.!?]+|\n/g) || [fullText];
-            sentences = sentences.map(s => s.trim()).filter(s => s.length > 2);
-            document.getElementById('content-area').innerHTML = sentences.map((s, i) => `<span id="s-${i}" class="sentence" onclick="window.read(${i})">${s} </span>`).join('');
+            sentences = sentences.map(s => s.trim()).filter(s => s.length > 1);
+            const area = document.getElementById('content-area');
+            area.innerHTML = sentences.map((s, i) => `<span id="s-${i}" class="sentence" onclick="readSentence(${i})">${s} </span>`).join('');
             if (b.savedIndex) {
                 lastReadIdx = b.savedIndex;
-                setTimeout(() => document.getElementById(`s-${lastReadIdx}`).scrollIntoView({ behavior: 'smooth', block: 'center' }), 400);
+                const el = document.getElementById(`s-${lastReadIdx}`);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         }
 
-        window.read = async (index) => {
-            audio.pause();
-            isPaused = false;
-            if (index >= sentences.length) return;
-            lastReadIdx = index;
-            document.querySelectorAll('.sentence').forEach(s => s.classList.remove('reading'));
+        function readSentence(index) {
+            synth.cancel();
             const el = document.getElementById(`s-${index}`);
-            if (el) el.classList.add('reading');
-
-            if (tts) {
-                const output = await tts(sentences[index]);
-                const blob = new Blob([output.audio], { type: 'audio/wav' });
-                audio.src = URL.createObjectURL(blob);
-                audio.play();
-                audio.onended = () => { if (!isPaused) window.read(index + 1); };
-            } else {
-                // Fallback sistema se l'AI non carica
-                window.speechSynthesis.cancel();
-                const utter = new SpeechSynthesisUtterance(sentences[index]);
-                utter.lang = 'it-IT';
-                utter.onend = () => { if (!isPaused) window.read(index + 1); };
-                window.speechSynthesis.speak(utter);
-            }
-            if (index % 2 === 0) document.getElementById(`s-${index}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (!el) return;
+            document.querySelectorAll('.sentence').forEach(s => s.classList.remove('reading'));
+            el.classList.add('reading');
+            lastReadIdx = index;
+            const utter = new SpeechSynthesisUtterance(sentences[index]);
+            const selectedVoiceName = document.getElementById('voiceSelect').value;
+            utter.voice = synth.getVoices().find(v => v.name === selectedVoiceName);
+            utter.onend = () => { if(!isPaused) readSentence(index + 1); };
+            synth.speak(utter);
+            isPaused = false;
+            document.getElementById('pauseBtn').innerText = "PAUSA 🎀";
+            if (index % 2 === 0) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
-        window.togglePlay = () => {
-            if (!audio.paused) { audio.pause(); isPaused = true; }
-            else if (lastReadIdx !== -1) window.read(lastReadIdx);
-        };
+        function togglePlay() {
+            if (synth.speaking && !isPaused) {
+                synth.pause();
+                isPaused = true;
+                document.getElementById('pauseBtn').innerText = "RIPRENDI ✨";
+            } else if (isPaused) {
+                synth.resume();
+                isPaused = false;
+                document.getElementById('pauseBtn').innerText = "PAUSA 🎀";
+            } else if (lastReadIdx !== -1) {
+                readSentence(lastReadIdx);
+            }
+        }
 
-        window.saveBookmark = async () => {
+        async function saveBookmark() {
             if (lastReadIdx !== -1) {
                 const b = await localforage.getItem(currentBookId);
                 b.savedIndex = lastReadIdx;
                 await localforage.setItem(currentBookId, b);
-                alert("Posizione salvata! 📌✨");
+                alert("Salvato! 📌");
             }
-        };
-
-        initAI();
+        }
+        renderLibrary();
     </script>
 </body>
 </html>
