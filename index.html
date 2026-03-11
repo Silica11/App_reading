@@ -3,47 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lettore HTML Intelligente</title>
+    <title>Lettore Pulito</title>
     <script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
     <style>
         :root { --bg: #fdf6e3; --text: #2c3e50; --accent: #d33682; }
         body { font-family: 'Georgia', serif; margin: 0; background: var(--bg); color: var(--text); }
         
         /* Libreria */
-        #library-view { padding: 20px; }
-        #library { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
-        .book-item { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; cursor: pointer; }
+        #library-view { padding: 20px; text-align: center; }
+        #library { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; margin-top: 20px; }
+        .book-item { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); cursor: pointer; border: 1px solid #eee; transition: 0.2s; }
+        .book-item:active { transform: scale(0.98); }
         
         /* Lettore */
-        #reader-view { display: none; padding: 20px; padding-bottom: 180px; }
-        #content-area p { cursor: pointer; padding: 5px; border-radius: 5px; transition: 0.3s; margin-bottom: 1em; }
-        #content-area p:hover { background: rgba(0,0,0,0.05); }
-        #content-area p.reading { background: #fff9c4; border-left: 4px solid var(--accent); }
+        #reader-view { display: none; padding: 20px; padding-bottom: 200px; }
+        #content-area { max-width: 700px; margin: 0 auto; line-height: 1.8; font-size: 1.15em; }
+        #content-area p { cursor: pointer; padding: 12px; border-radius: 8px; margin: 8px 0; transition: background 0.2s; }
+        #content-area p.reading { background: #fff9c4; border-left: 5px solid var(--accent); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         
         /* Controlli */
-        #controls { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 15px; box-shadow: 0 -5px 15px rgba(0,0,0,0.1); z-index: 1000; }
-        .btns { display: flex; justify-content: space-around; gap: 10px; margin-bottom: 10px; }
-        button { flex: 1; padding: 12px; border-radius: 25px; border: none; background: var(--accent); color: white; font-weight: bold; font-size: 14px; }
+        #controls { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 20px; box-shadow: 0 -5px 20px rgba(0,0,0,0.1); z-index: 1000; border-radius: 20px 20px 0 0; }
+        .btns { display: flex; justify-content: space-around; gap: 15px; margin-bottom: 15px; }
+        button { flex: 1; padding: 15px; border-radius: 30px; border: none; background: var(--accent); color: white; font-weight: bold; font-size: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .btn-sec { background: #586e75; }
-        select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; }
-        .back-link { display: block; margin-bottom: 20px; color: var(--accent); text-decoration: none; font-weight: bold; }
+        select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd; background: #f9f9f9; font-size: 14px; }
+        .back-link { display: inline-block; margin-bottom: 25px; color: var(--accent); text-decoration: none; font-weight: bold; font-size: 1.1em; }
     </style>
 </head>
 <body>
 
     <div id="library-view">
-        <h2>📚 I miei Libri HTML</h2>
+        <h1>📚 La mia Libreria</h1>
         <div id="library"></div>
-        <button style="position:fixed; bottom:20px; right:20px; width:60px; height:60px; border-radius:50%; font-size:30px;" onclick="document.getElementById('fileInput').click()">+</button>
-        <input type="file" id="fileInput" style="display:none" accept=".html" onchange="importFile(event)">
+        <button style="position:fixed; bottom:30px; right:30px; width:65px; height:65px; border-radius:50%; font-size:35px;" onclick="document.getElementById('fileInput').click()">+</button>
+        <input type="file" id="fileInput" style="display:none" accept=".html,.htm,.txt" onchange="importFile(event)">
     </div>
 
     <div id="reader-view">
-        <a href="#" class="back-link" onclick="location.reload()">← Torna alla Libreria</a>
+        <a href="#" class="back-link" onclick="location.reload()">← Esci dal libro</a>
         <div id="content-area"></div>
         
         <div id="controls">
-            <div id="status" style="font-size: 0.8em; text-align: center; margin-bottom: 5px; color: #666;">Tocca un paragrafo per leggere</div>
+            <div id="status" style="font-size: 0.85em; text-align: center; margin-bottom: 10px; color: #888; font-style: italic;">Tocca un paragrafo per iniziare</div>
             <div class="btns">
                 <button class="btn-sec" onclick="saveBookmark()">📌 Segna</button>
                 <button id="pauseBtn" onclick="stopSpeech()">Pausa</button>
@@ -57,7 +58,6 @@
         let currentBookId = null;
         let lastReadPara = null;
 
-        // 1. Caricamento Voci (migliorato)
         function populateVoices() {
             const voices = synth.getVoices();
             const select = document.getElementById('voiceSelect');
@@ -69,13 +69,12 @@
         }
         populateVoices();
 
-        // 2. Importazione
         async function importFile(e) {
             const file = e.target.files[0];
             if (!file) return;
             const text = await file.text();
             const id = "h_" + Date.now();
-            await localforage.setItem(id, { id, title: file.name, content: text, savedIndex: 0 });
+            await localforage.setItem(id, { id, title: file.name.replace('.html',''), content: text, savedIndex: 0 });
             renderLibrary();
         }
 
@@ -88,14 +87,14 @@
                     const b = await localforage.getItem(k);
                     const div = document.createElement('div');
                     div.className = 'book-item';
-                    div.innerHTML = `📖<br>${b.title}`;
+                    div.innerHTML = `📖<br><small>${b.title}</small>`;
                     div.onclick = () => openBook(b.id);
                     lib.appendChild(div);
                 }
             }
         }
 
-        // 3. Apertura Libro con Paragrafizzazione
+        // --- IL "FILTRO MAGICO" PER PULIRE IL CODICE ---
         async function openBook(id) {
             const b = await localforage.getItem(id);
             currentBookId = id;
@@ -104,51 +103,67 @@
             
             const area = document.getElementById('content-area');
             
-            // Pulizia e creazione paragrafi
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = b.content;
-            const textContent = tempDiv.innerText.split('\n').filter(p => p.trim().length > 2);
+            // 1. Usiamo un parser vero per estrarre solo il testo
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(b.content, 'text/html');
+            
+            // 2. Rimuoviamo script e stili che sporcano il testo
+            const cleanUp = doc.querySelectorAll('script, style, meta, link');
+            cleanUp.forEach(el => el.remove());
+
+            // 3. Prendiamo solo il testo pulito e lo dividiamo in paragrafi reali
+            // Usiamo il testo del body, diviso per i blocchi di testo che hanno senso
+            const textContent = doc.body.innerText
+                .split('\n')
+                .map(p => p.trim())
+                .filter(p => p.length > 5); // Scartiamo frammenti troppo corti o vuoti
             
             area.innerHTML = textContent.map((p, index) => 
                 `<p id="p-${index}" onclick="readParagraph(${index})">${p}</p>`
             ).join('');
 
-            // Vai al segnalibro se esiste
             if (b.savedIndex) {
                 const el = document.getElementById(`p-${b.savedIndex}`);
-                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    el.classList.add('reading');
+                    lastReadPara = el;
+                    lastReadPara.index = b.savedIndex;
+                }
             }
         }
 
-        // 4. Lettura del Paragrafo
         function readParagraph(index) {
             stopSpeech();
-            
             const el = document.getElementById(`p-${index}`);
             if (!el) return;
 
-            // Evidenziazione
             if (lastReadPara) lastReadPara.classList.remove('reading');
             el.classList.add('reading');
             lastReadPara = el;
-            lastReadPara.index = index; // Salviamo l'indice corrente
+            lastReadPara.index = index;
 
             const utter = new SpeechSynthesisUtterance(el.innerText);
             const selectedVoiceName = document.getElementById('voiceSelect').value;
             utter.voice = synth.getVoices().find(v => v.name === selectedVoiceName);
             
-            // Quando finisce questo paragrafo, passa al prossimo!
             utter.onend = () => {
-                readParagraph(index + 1);
+                // Passa al prossimo paragrafo automaticamente
+                const next = index + 1;
+                if (document.getElementById(`p-${next}`)) {
+                    readParagraph(next);
+                    // Scroll automatico per seguire la lettura
+                    document.getElementById(`p-${next}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
             };
 
             synth.speak(utter);
-            document.getElementById('status').innerText = "Lettura in corso...";
+            document.getElementById('status').innerText = "📖 Sto leggendo...";
         }
 
         function stopSpeech() {
             synth.cancel();
-            document.getElementById('status').innerText = "In pausa";
+            document.getElementById('status').innerText = "⏸ In pausa";
         }
 
         async function saveBookmark() {
@@ -156,9 +171,8 @@
                 const b = await localforage.getItem(currentBookId);
                 b.savedIndex = lastReadPara.index;
                 await localforage.setItem(currentBookId, b);
-                alert("Posizione salvata al paragrafo corrente!");
-            } else {
-                alert("Tocca un paragrafo prima di segnare la posizione.");
+                document.getElementById('status').innerText = "📌 Posizione salvata!";
+                setTimeout(() => { document.getElementById('status').innerText = "In pausa"; }, 2000);
             }
         }
 
