@@ -3,119 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audio Lettore eBook</title>
-    <script src="https://cdn.jsdelivr.net/npm/epubjs/dist/epub.min.js"></script>
+    <title>Il Mio Lettore HTML</title>
     <script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
     <style>
-        :root { --bg: #fdf6e3; --text: #2c3e50; --accent: #d33682; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; background: var(--bg); color: var(--text); }
-        #library { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; padding: 15px; }
-        .book-card { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.1); cursor: pointer; text-align: center; font-size: 0.8em; }
-        .book-card img { width: 100%; height: 180px; object-fit: cover; }
-        .book-card p { padding: 5px; margin: 0; font-weight: bold; }
+        :root { --bg: #ffffff; --text: #1a1a1a; --accent: #4285f4; }
+        body { font-family: 'Georgia', serif; margin: 0; background: var(--bg); color: var(--text); line-height: 1.6; }
+        #library { padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
+        .book-item { border: 1px solid #ddd; padding: 15px; border-radius: 10px; cursor: pointer; text-align: center; background: #f9f9f9; }
         
-        #player { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 15px; box-shadow: 0 -4px 15px rgba(0,0,0,0.1); display: none; z-index: 1000; }
-        .ctrl-btns { display: flex; justify-content: space-around; margin-bottom: 10px; }
-        button { border: none; background: var(--accent); color: white; padding: 10px 20px; border-radius: 20px; font-weight: bold; cursor: pointer; }
-        select { width: 100%; padding: 8px; border-radius: 5px; margin-top: 5px; }
-        .add-btn { position: fixed; bottom: 90px; right: 20px; width: 55px; height: 55px; border-radius: 50%; background: #268bd2; color: white; font-size: 30px; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 99; }
-        #status-msg { font-size: 0.7em; color: #888; text-align: center; margin-bottom: 5px; }
+        #reader-view { display: none; padding: 20px; padding-bottom: 150px; }
+        #controls { position: fixed; bottom: 0; width: 100%; background: white; border-top: 1px solid #ddd; padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 -5px 15px rgba(0,0,0,0.1); }
+        .btns { display: flex; justify-content: space-around; }
+        button { padding: 12px 25px; border-radius: 25px; border: none; background: var(--accent); color: white; font-weight: bold; font-size: 16px; }
+        .secondary { background: #5f6368; }
+        select { padding: 8px; border-radius: 5px; border: 1px solid #ccc; width: 100%; }
+        .back-btn { margin-bottom: 20px; display: block; color: var(--accent); text-decoration: none; font-weight: bold; }
+        #content-area { font-size: 1.1em; max-width: 800px; margin: 0 auto; }
+        .highlight { background-color: yellow; } /* Evidenzia la frase letta */
     </style>
 </head>
 <body>
 
-    <div id="library"></div>
-    <button class="add-btn" onclick="document.getElementById('fileInput').click()">+</button>
-    <input type="file" id="fileInput" style="display:none" accept=".epub" onchange="handleFile(event)">
+    <div id="library-view">
+        <h2 style="padding: 20px;">I miei Libri</h2>
+        <div id="library"></div>
+        <button style="position:fixed; bottom:20px; right:20px; width:60px; height:60px; border-radius:50%;" onclick="document.getElementById('fileInput').click()">+</button>
+        <input type="file" id="fileInput" style="display:none" accept=".html,.txt" onchange="importFile(event)">
+    </div>
 
-    <div id="player">
-        <div id="status-msg">Pronto</div>
-        <div id="book-info" style="font-weight: bold; text-align: center; margin-bottom: 10px; font-size: 0.9em;"></div>
-        <div class="ctrl-btns">
-            <button onclick="savePos()">📌 Segna</button>
-            <button id="playBtn" onclick="togglePlay()" style="background: #859900; min-width: 80px;">Play</button>
-            <button onclick="stopSpeech()" style="background: #dc322f;">Stop</button>
+    <div id="reader-view">
+        <a href="#" class="back-btn" onclick="showLibrary()">← Torna alla Libreria</a>
+        <div id="content-area"></div>
+        
+        <div id="controls">
+            <div id="reading-status" style="font-size: 0.8em; text-align: center; color: #666;"></div>
+            <div class="btns">
+                <button class="secondary" onclick="savePosition()">📌 Segna</button>
+                <button id="playBtn" onclick="toggleRead()">Riproduci</button>
+                <button class="secondary" onclick="stopRead()">Stop</button>
+            </div>
+            <select id="voiceSelect"></select>
         </div>
-        <select id="voiceSelect"></select>
     </div>
 
     <script>
-        let book = null;
-        let rendition = null;
         const synth = window.speechSynthesis;
+        let voices = [];
+        let currentBookId = null;
         let isPlaying = false;
-        let currentBookData = null;
 
         // Caricamento Voci
         function loadVoices() {
-            const voices = synth.getVoices();
+            voices = synth.getVoices();
             const select = document.getElementById('voiceSelect');
-            const itEn = voices.filter(v => v.lang.includes('it') || v.lang.includes('en'));
-            select.innerHTML = itEn.map(v => `<option value="${v.name}">${v.name} (${v.lang})</option>`).join('');
+            const filtered = voices.filter(v => v.lang.includes('it') || v.lang.includes('en'));
+            select.innerHTML = filtered.map(v => `<option value="${v.name}">${v.name} (${v.lang})</option>`).join('');
         }
         synth.onvoiceschanged = loadVoices;
         loadVoices();
 
-        // Caricamento File
-        async function handleFile(e) {
+        async function importFile(e) {
             const file = e.target.files[0];
             if (!file) return;
-            document.getElementById('status-msg').innerText = "Analisi libro...";
-
-            const reader = new FileReader();
-            reader.onload = async (event) => {
-                try {
-                    const data = event.target.result;
-                    const tempBook = ePub(data);
-                    await tempBook.ready;
-                    const meta = await tempBook.loaded.metadata;
-                    let cover = await tempBook.coverUrl().catch(() => null);
-
-                    const bookObj = {
-                        id: "id_" + Date.now(),
-                        title: meta.title || file.name,
-                        cover: cover,
-                        fileData: data,
-                        cfi: ""
-                    };
-
-                    await localforage.setItem(bookObj.id, bookObj);
-                    renderLib();
-                } catch (err) {
-                    alert("Errore: Il file potrebbe essere corrotto. Passalo su Calibre!");
-                }
-            };
-            reader.readAsArrayBuffer(file);
+            const text = await file.text();
+            const id = "book_" + Date.now();
+            const book = { id, title: file.name, content: text, lastPos: 0 };
+            await localforage.setItem(id, book);
+            renderLibrary();
         }
 
-        async function renderLib() {
+        async function renderLibrary() {
             const lib = document.getElementById('library');
             lib.innerHTML = "";
             const keys = await localforage.keys();
             for (let k of keys) {
                 const b = await localforage.getItem(k);
-                const card = document.createElement('div');
-                card.className = 'book-card';
-                card.onclick = () => openBook(b);
-                card.innerHTML = `<img src="${b.cover || 'https://via.placeholder.com/150'}"><p>${b.title}</p>`;
-                lib.appendChild(card);
+                lib.innerHTML += `<div class="book-item" onclick="openBook('${b.id}')">📖<br>${b.title}</div>`;
             }
         }
 
-        async function openBook(bData) {
-            currentBookData = bData;
-            document.getElementById('player').style.display = 'block';
-            document.getElementById('book-info').innerText = bData.title;
+        async function openBook(id) {
+            const b = await localforage.getItem(id);
+            currentBookId = id;
+            document.getElementById('library-view').style.display = 'none';
+            document.getElementById('reader-view').style.display = 'block';
+            const contentArea = document.getElementById('content-area');
+            contentArea.innerHTML = b.content;
             
-            if (book) book.destroy();
-            book = ePub(bData.fileData);
-            rendition = book.renderTo(document.createElement('div')); // Render invisibile per estrarre testo
-            
-            await rendition.display(bData.cfi || undefined);
-            document.getElementById('status-msg').innerText = "Libro pronto!";
+            // Scorri fino alla posizione salvata
+            window.scrollTo(0, b.lastPos || 0);
         }
 
-        async function togglePlay() {
+        function showLibrary() {
+            stopRead();
+            document.getElementById('library-view').style.display = 'block';
+            document.getElementById('reader-view').style.display = 'none';
+        }
+
+        function toggleRead() {
             if (isPlaying) {
                 synth.pause();
                 isPlaying = false;
@@ -124,54 +109,44 @@
                 if (synth.paused) {
                     synth.resume();
                 } else {
-                    readText();
+                    startReadingFromScroll();
                 }
                 isPlaying = true;
                 document.getElementById('playBtn').innerText = "Pausa";
             }
         }
 
-        async function readText() {
+        function startReadingFromScroll() {
             synth.cancel();
-            const loc = rendition.currentLocation();
-            const section = book.spine.get(loc.start.cfi);
-            const doc = await section.load(book.load.bind(book));
+            // Trucco: prendiamo il testo visibile nella parte alta dello schermo
+            const text = document.getElementById('content-area').innerText;
+            // Calcoliamo approssimativamente dove si trova l'utente basandoci sullo scroll
+            const scrollPercent = window.scrollY / document.body.scrollHeight;
+            const startChar = Math.floor(text.length * scrollPercent);
             
-            // PULIZIA TESTO: Rimuove spazi doppi e a capo inutili
-            let text = doc.body.innerText.replace(/\n/g, ' ').replace(/\s\s+/g, ' ');
-            
-            const utter = new SpeechSynthesisUtterance(text);
-            const voiceName = document.getElementById('voiceSelect').value;
-            utter.voice = synth.getVoices().find(v => v.name === voiceName);
-            utter.lang = utter.voice ? utter.voice.lang : 'it-IT';
-            
-            // Segna la posizione quando finisce il capitolo
-            utter.onend = () => { if(isPlaying) nextChapter(); };
-            
+            const utter = new SpeechSynthesisUtterance(text.substring(startChar));
+            const selectedVoice = document.getElementById('voiceSelect').value;
+            utter.voice = voices.find(v => v.name === selectedVoice);
+            utter.lang = utter.voice.lang;
+            utter.rate = 1.0;
+
             synth.speak(utter);
         }
 
-        async function nextChapter() {
-            await rendition.next();
-            readText();
-        }
-
-        function stopSpeech() {
+        function stopRead() {
             synth.cancel();
             isPlaying = false;
-            document.getElementById('playBtn').innerText = "Play";
+            document.getElementById('playBtn').innerText = "Riproduci";
         }
 
-        async function savePos() {
-            if (!currentBookData) return;
-            const cfi = rendition.currentLocation().start.cfi;
-            currentBookData.cfi = cfi;
-            await localforage.setItem(currentBookData.id, currentBookData);
-            document.getElementById('status-msg').innerText = "Posizione salvata!";
-            setTimeout(() => document.getElementById('status-msg').innerText = "In lettura", 2000);
+        async function savePosition() {
+            const b = await localforage.getItem(currentBookId);
+            b.lastPos = window.scrollY;
+            await localforage.setItem(currentBookId, b);
+            alert("Posizione salvata!");
         }
 
-        renderLib();
+        renderLibrary();
     </script>
 </body>
 </html>
