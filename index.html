@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mio Audio-Ebook</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/epub.js/0.3.88/epub.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+    <style>
+        /* Stile Minimalista Kindle-style */
+        body { font-family: sans-serif; margin: 0; background: #f4f4f4; }
+        #library { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 20px; padding: 20px; }
+        .book-card { background: white; padding: 10px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
+        .book-card img { width: 100%; border-radius: 4px; }
+        #player { display: none; position: fixed; bottom: 0; width: 100%; background: white; padding: 20px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); text-align: center; }
+        button { padding: 10px 20px; font-size: 16px; margin: 5px; border-radius: 50px; border: none; background: #007bff; color: white; }
+    </style>
+</head>
+<body>
+
+    <div id="library">
+        <div class="book-card" onclick="document.getElementById('fileInput').click()">
+            <div style="height: 150px; display: flex; align-items: center; justify-content: center; border: 2px dashed #ccc;">+ Aggiungi Libro</div>
+        </div>
+    </div>
+    
+    <input type="file" id="fileInput" style="display:none" accept=".epub" onchange="handleFileUpload(event)">
+
+    <div id="player">
+        <h3 id="bookTitle">Titolo Libro</h3>
+        <button onclick="togglePlay()">Play/Pausa</button>
+        <button onclick="stopReading()">Stop</button>
+        <button onclick="saveBookmark()" style="background: #28a745;">Segna Riga</button>
+        <p id="status">Pronto per leggere...</p>
+    </div>
+
+    <script>
+        let currentBook = null;
+        let synthesis = window.speechSynthesis;
+        let utterance = new SpeechSynthesisUtterance();
+        utterance.lang = 'it-IT'; // Imposta italiano di default
+
+        // Caricamento del file
+        async function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    const data = e.target.result;
+                    // Salva nel database locale (opzionale per persistenza)
+                    await localforage.setItem(file.name, data);
+                    renderLibrary();
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        }
+
+        // Funzione per leggere il testo della "riga" corrente
+        function speakText(text) {
+            synthesis.cancel(); // Ferma letture precedenti
+            utterance.text = text;
+            synthesis.speak(utterance);
+        }
+
+        function togglePlay() {
+            if (synthesis.speaking) {
+                synthesis.paused ? synthesis.resume() : synthesis.pause();
+            } else {
+                // Qui andrebbe la logica per estrarre il testo dal punto salvato
+                speakText("Inizio della lettura del tuo fantastico libro...");
+            }
+        }
+
+        function saveBookmark() {
+            alert("Posizione salvata!");
+            // Qui salveremo il CFI (identificatore di posizione) di Epub.js
+        }
+    </script>
+</body>
+</html>
