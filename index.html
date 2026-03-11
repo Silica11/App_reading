@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Michael Magic Reader 🎀</title>
+    <title>Piper Magic Reader 🎀</title>
     <script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
     <style>
         :root { --bg: #fff0f6; --text: #70133a; --accent: #ff85a2; --btn-pink: #ffc2d1; }
@@ -14,66 +14,64 @@
             color: var(--text); overflow-x: hidden;
         }
 
-        /* LIBRERIA: CELLE LARGHE 280px */
+        /* LIBRERIA: CELLE LARGHE */
         #library-view { padding: 20px; text-align: center; padding-bottom: 150px; }
         #library { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; max-width: 1100px; margin: 20px auto; }
-        .book-item { background: rgba(255, 255, 255, 0.8); padding: 35px; border-radius: 25px; position: relative; border: 2px solid var(--accent); cursor: pointer; font-weight: bold; font-size: 1.3em; box-shadow: 0 4px 15px rgba(255,133,162,0.2); }
-        .delete-btn { position: absolute; top: -12px; right: -12px; background: #ff4d6d; color: white; border: none; border-radius: 50%; width: 40px; height: 40px; font-weight: bold; font-size: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .book-item { background: rgba(255, 255, 255, 0.8); padding: 35px; border-radius: 25px; position: relative; border: 2px solid var(--accent); cursor: pointer; font-weight: bold; font-size: 1.3em; }
+        .delete-btn { position: absolute; top: -12px; right: -12px; background: #ff4d6d; color: white; border: none; border-radius: 50%; width: 40px; height: 40px; font-weight: bold; font-size: 20px; }
 
-        /* TASTO + GIGANTE 90px */
+        /* TASTO + GIGANTE */
         .add-btn { position: fixed; bottom: 30px; right: 30px; width: 90px; height: 90px; border-radius: 50%; font-size: 50px; background: var(--accent); border: 4px solid white; color: white; cursor: pointer; z-index: 2000; box-shadow: 0 8px 20px rgba(255,133,162,0.4); }
 
-        /* LETTORE: TESTO GRANDE */
-        #reader-view { display: none; padding: 15px; padding-bottom: 1100px; } 
-        #content-area { max-width: 650px; margin: 0 auto; line-height: 1.7; font-size: 1.6em; font-family: 'Georgia', serif; background: rgba(255, 255, 255, 0.4); padding: 30px; border-radius: 30px; }
+        /* LETTORE */
+        #reader-view { display: none; padding: 15px; padding-bottom: 500px; } 
+        #content-area { max-width: 650px; margin: 0 auto; line-height: 1.8; font-size: 1.5em; font-family: 'Georgia', serif; background: rgba(255, 255, 255, 0.4); padding: 30px; border-radius: 30px; }
         .sentence { display: inline; cursor: pointer; padding: 2px 5px; border-radius: 8px; }
         .reading { background: #ffdeeb; border-bottom: 5px solid #ff477e; font-weight: bold; }
 
-        /* CONTROLLI COLOSSALI (Richiesti: 450px altezza) */
-        #controls { position: fixed; bottom: 0; left: 0; width: 100%; background: white; z-index: 3000; display: flex; flex-direction: column; border-top: 5px solid var(--accent); }
-        .ui-btn { width: 50%; border: none; font-weight: 900; text-transform: uppercase; cursor: pointer; color: var(--text); display: flex; align-items: center; justify-content: center; }
+        /* CONTROLLI (Dimensioni richieste da te) */
+        #controls { position: fixed; bottom: 0; left: 0; width: 100%; background: white; z-index: 5000; display: flex; flex-direction: column; border-top: 3px solid var(--accent); }
+        .ui-btn { width: 100%; border: none; font-weight: 900; text-transform: uppercase; cursor: pointer; color: var(--text); display: flex; align-items: center; justify-content: center; }
 
         #backBtn { height: 100px; background: #fff; font-size: 22px; border-bottom: 3px solid var(--bg); }
         #markBtn { height: 150px; background: #e3f2fd; color: #1976d2; font-size: 22px; border-bottom: 5px solid var(--bg); }
         #pauseBtn { height: 150px; background: var(--btn-pink); font-size: 22px; }
 
-        /* SCHERMATA CARICAMENTO AI */
-        #loader-ai { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; }
-        .progress-container { width: 80%; max-width: 300px; height: 15px; background: white; border-radius: 10px; border: 3px solid var(--accent); margin-top: 25px; overflow: hidden; }
+        /* SCHERMATA CARICAMENTO */
+        #loader-ai { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 6000; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; }
+        .progress-bar { width: 80%; max-width: 300px; height: 15px; background: white; border-radius: 10px; border: 3px solid var(--accent); margin-top: 25px; overflow: hidden; }
         #progress-fill { width: 0%; height: 100%; background: var(--accent); transition: width 0.3s; }
-        #log-status { font-size: 0.7em; margin-top: 15px; color: #ad1457; font-family: monospace; }
     </style>
 </head>
 <body>
 
     <div id="loader-ai">
-        <h2 style="font-size: 1.8em;">✨ Michael sta arrivando... 🎀</h2>
-        <p>Sto scaricando i file vocali (90MB totali).<br>Fallo sotto Wi-Fi se puoi! ✨</p>
-        <div class="progress-container"><div id="progress-fill"></div></div>
-        <div id="log-status">Inizializzazione...</div>
-        <button onclick="document.getElementById('loader-ai').style.display='none'" style="margin-top:40px; padding:15px; border-radius:20px; border:2px solid var(--accent); background:white; color:var(--text); font-weight:bold;">Salta e usa voce di sistema</button>
+        <h2>✨ Download Piper Michael... 🎀</h2>
+        <p>Sto preparando la voce maschile.<br>L'attesa varrà il risultato! ✨</p>
+        <div class="progress-bar"><div id="progress-fill"></div></div>
+        <button onclick="document.getElementById('loader-ai').style.display='none'" style="margin-top:30px; padding:10px; border-radius:15px; border:1px solid var(--accent); background:white;">Usa voce di sistema nel frattempo</button>
     </div>
 
     <div id="library-view">
-        <h1>✨ Audio Library 🎀</h1>
-        <div id="library">Tocca + per aggiungere un libro HTML! ✨</div>
+        <h1>✨ My Stories 🎀</h1>
+        <div id="library">Tocca + per aggiungere un libro! ✨</div>
         <button class="add-btn" onclick="document.getElementById('fileInput').click()">+</button>
-        <input type="file" id="fileInput" style="display:none" accept=".html,.htm,.txt" onchange="importFile(event)">
+        <input type="file" id="fileInput" style="display:none" accept=".html,.htm,.txt" onchange="window.importFile(event)">
     </div>
 
     <div id="reader-view">
         <div id="content-area"></div>
         <div id="controls">
-            <button id="backBtn" class="ui-btn" onclick="location.reload()">⬅ TORNA ALLA LIBRERIA</button>
+            <button id="backBtn" class="ui-btn" onclick="location.reload()">⬅ TORNA ALLA LIBRERIA ✨</button>
             <button id="markBtn" class="ui-btn" onclick="window.saveBookmark()">📌 SEGNA POSIZIONE</button>
             <button id="pauseBtn" class="ui-btn" onclick="window.togglePlay()">PAUSA / PLAY 🎀</button>
         </div>
     </div>
 
     <script type="module">
+        // Usiamo Transformers.js per caricare un modello Piper-like (ONNX)
         import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.1';
         
-        // Forza l'uso della cache del browser
         env.allowLocalModels = false;
         env.useBrowserCache = true;
 
@@ -84,29 +82,21 @@
         let sentences = [];
         let audio = new Audio();
 
-        const log = (msg) => { document.getElementById('log-status').innerText = msg; console.log(msg); };
-
-        // 1. CARICAMENTO MOTORE AI (Con Log Dettagliato)
-        async function loadAI() {
+        // 1. CARICAMENTO PIPER (Sorgente ONNX Community)
+        async function loadPiper() {
             try {
-                log("Connessione ai server vocali...");
-                tts = await pipeline('text-to-speech', 'Xenova/kokoro-82M', {
+                tts = await pipeline('text-to-speech', 'Xenova/it_IT-riccardo-medium', {
                     progress_callback: (p) => {
                         if (p.status === 'progress') {
                             document.getElementById('progress-fill').style.width = p.progress.toFixed(1) + '%';
-                            log(`Scaricamento: ${p.progress.toFixed(1)}% di ${p.file}`);
-                        } else if (p.status === 'initiate') {
-                            log(`Avvio download: ${p.file}...`);
-                        } else if (p.status === 'done') {
-                            log(`Completato: ${p.file}`);
                         }
                     }
                 });
-                log("Michael è pronto! ✨");
-                setTimeout(() => document.getElementById('loader-ai').style.display = 'none', 1000);
+                document.getElementById('loader-ai').style.display = 'none';
+                renderLibrary();
             } catch (e) {
-                log("Errore critico: " + e.message);
-                // Non blocchiamo l'app, permettiamo di usarla con la voce di sistema
+                console.error("Piper fallito:", e);
+                document.getElementById('loader-ai').style.display = 'none';
             }
         }
 
@@ -165,19 +155,20 @@
 
             if (tts) {
                 try {
-                    const output = await tts(sentences[index], { voice: 'am_michael' });
+                    // Riccardo è la voce maschile Piper standard di alta qualità
+                    const output = await tts(sentences[index]);
                     const blob = new Blob([output.audio], { type: 'audio/wav' });
                     audio.src = URL.createObjectURL(blob);
                     audio.play();
                     audio.onended = () => { if (!isPaused) window.readFrom(index + 1); };
-                } catch (err) { window.useSystemTTS(index); }
+                } catch (err) { window.fallback(index); }
             } else {
-                window.useSystemTTS(index);
+                window.fallback(index);
             }
             if (index % 2 === 0) document.getElementById(`s-${index}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
         };
 
-        window.useSystemTTS = (index) => {
+        window.fallback = (index) => {
             window.speechSynthesis.cancel();
             const utter = new SpeechSynthesisUtterance(sentences[index]);
             utter.lang = 'it-IT';
@@ -186,13 +177,8 @@
         };
 
         window.togglePlay = () => {
-            if (tts && audio.src) {
-                if (!audio.paused) { audio.pause(); isPaused = true; }
-                else if (lastReadIdx !== -1) window.readFrom(lastReadIdx);
-            } else {
-                window.speechSynthesis.paused ? window.speechSynthesis.resume() : window.speechSynthesis.pause();
-                isPaused = !isPaused;
-            }
+            if (tts && !audio.paused) { audio.pause(); isPaused = true; }
+            else if (lastReadIdx !== -1) window.readFrom(lastReadIdx);
         };
 
         window.saveBookmark = async () => {
@@ -205,7 +191,7 @@
         };
 
         renderLibrary();
-        loadAI();
+        loadPiper();
     </script>
 </body>
 </html>
