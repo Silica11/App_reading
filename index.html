@@ -78,16 +78,35 @@
             z-index: 1000; 
             border-radius: 30px 30px 0 0; 
             backdrop-filter: blur(5px);
-        }
-        
-        .main-btns { display: flex; gap: 10px; height: 100px; }
-        
-        .big-btn { 
-            flex: 1; border-radius: 25px; border: 3px solid white; 
-            color: var(--text); font-weight: 900; font-size: 20px; 
-            text-transform: uppercase; cursor: pointer;
-            box-shadow: 0 4px 0 var(--accent);
-        }
+        /* CONTROLLI IMPILATI IN VERTICALE */
+.main-btns { 
+    display: flex; 
+    flex-direction: column; /* Li mette uno sopra l'altro */
+    gap: 15px; /* Spazio tra i due bottoni */
+    height: 250px; /* Altezza totale del blocco pulsanti */
+}
+
+.big-btn { 
+    width: 100%; /* Occupano tutta la larghezza disponibile */
+    flex: 1; /* Si dividono lo spazio in parti uguali */
+    border-radius: 20px; 
+    border: 3px solid white; 
+    color: var(--text); 
+    font-weight: 900; 
+    font-size: 26px; /* Scritta bella grande */
+    text-transform: uppercase; 
+    cursor: pointer;
+    box-shadow: 0 4px 0 var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Spazio extra nel lettore per non coprire il testo con i tastoni */
+#reader-view { 
+    padding: 20px; 
+    padding-bottom: 400px; 
+}
         
         .big-btn:active { transform: translateY(4px); box-shadow: none; }
         
