@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magical Reader 🎀</title>
+    <title>Magical Audio Reader 🎀</title>
     <script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
     <style>
         :root { 
@@ -35,19 +35,19 @@
             background: rgba(255, 255, 255, 0.7); 
             padding: 20px; border-radius: 20px; position: relative; 
             border: 2px solid var(--accent); cursor: pointer;
-            font-weight: bold; font-size: 0.9em;
+            font-weight: bold;
         }
 
         .add-btn {
             position: fixed; bottom: 20px; right: 20px; 
-            width: 60px; height: 60px; 
-            border-radius: 50%; font-size: 35px; background: var(--accent); 
+            width: 70px; height: 70px; 
+            border-radius: 50%; font-size: 40px; background: var(--accent); 
             border: 4px solid white; color: white; cursor: pointer;
             z-index: 2000;
         }
 
-        /* LETTORE */
-        #reader-view { display: none; padding: 15px; padding-bottom: 250px; }
+        /* LETTORE: Testo che finisce molto prima dei tasti */
+        #reader-view { display: none; padding: 15px; padding-bottom: 40vh; }
         
         #content-area { 
             max-width: 600px; 
@@ -63,52 +63,65 @@
         .sentence { display: inline; cursor: pointer; padding: 2px 4px; border-radius: 8px; transition: 0.2s; }
         .reading { background: #ffdeeb; border-bottom: 3px solid #ff477e; font-weight: bold; }
 
-        /* CONTROLLI SPOSTATI A SINISTRA E RIMPICCIOLITI */
+        /* PANNELLO DI CONTROLLO FISSO E GIGANTE */
         #controls { 
             position: fixed; 
-            bottom: 20px;
-            left: 15px; /* Ancora i tasti a sinistra */
-            width: 260px; /* Larghezza fissa e ridotta per il telefono */
-            background: rgba(255, 255, 255, 0.96); 
-            padding: 10px; 
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.98); 
+            padding: 20px 0; 
             z-index: 1000;
-            border-radius: 20px;
-            box-shadow: 0 8px 20px rgba(255, 133, 162, 0.3);
+            border-radius: 30px 30px 0 0;
+            box-shadow: 0 -10px 30px rgba(255, 133, 162, 0.3);
             display: flex; 
             flex-direction: column; 
-            gap: 8px;
+            align-items: center;
+            gap: 15px;
         }
         
-        .btn-row { display: flex; gap: 8px; width: 100%; }
+        /* Contenitore tasti al 90% della larghezza schermo */
+        .control-wrapper {
+            width: 90%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .btn-row { display: flex; gap: 15px; width: 100%; }
         
         .ui-btn { 
             flex: 1; 
-            padding: 10px 5px; 
-            border-radius: 12px; 
-            border: 2px solid white;
-            font-weight: bold; 
-            font-size: 11px; /* Testo più piccolo per adattarsi */
+            padding: 25px 10px; /* Tasti molto più alti */
+            border-radius: 25px; 
+            border: 3px solid white;
+            font-weight: 900; 
+            font-size: 18px; /* Testo più grande */
             cursor: pointer;
-            box-shadow: 0 3px 0 var(--accent); 
+            box-shadow: 0 5px 0 var(--accent); 
             text-transform: uppercase;
             color: var(--text);
-            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        #backBtn { background: var(--btn-pink); font-size: 10px; padding: 8px; }
-        #markBtn { background: #e3f2fd; }
+        #backBtn { background: var(--btn-pink); font-size: 14px; padding: 15px; box-shadow: 0 4px 0 #e6a1b2; }
+        #markBtn { background: #e3f2fd; color: #1976d2; box-shadow: 0 5px 0 #bbdefb; }
         #pauseBtn { background: var(--btn-pink); }
 
         .delete-btn {
-            position: absolute; top: -8px; right: -8px; background: #ff4d6d;
-            color: white; border: none; border-radius: 50%; width: 25px; height: 25px;
+            position: absolute; top: -10px; right: -10px; background: #ff4d6d;
+            color: white; border: none; border-radius: 50%; width: 30px; height: 30px;
         }
     </style>
 </head>
 <body>
 
     <div id="library-view">
-        <h1>✨ My Stories 🎀</h1>
+        <h1>✨ My Library 🎀</h1>
         <div id="library"></div>
         <button class="add-btn" onclick="document.getElementById('fileInput').click()">+</button>
         <input type="file" id="fileInput" style="display:none" accept=".html" onchange="importFile(event)">
@@ -118,10 +131,12 @@
         <div id="content-area"></div>
         
         <div id="controls">
-            <button id="backBtn" class="ui-btn" onclick="location.reload()">⬅ LIBRERIA</button>
-            <div class="btn-row">
-                <button id="markBtn" class="ui-btn" onclick="saveBookmark()">📌 SEGNA</button>
-                <button id="pauseBtn" class="ui-btn" onclick="togglePlay()">PAUSA 🎀</button>
+            <div class="control-wrapper">
+                <button id="backBtn" class="ui-btn" onclick="location.reload()">⬅ TORNA ALLA LIBRERIA ✨</button>
+                <div class="btn-row">
+                    <button id="markBtn" class="ui-btn" onclick="saveBookmark()">📌 SEGNA</button>
+                    <button id="pauseBtn" class="ui-btn" onclick="togglePlay()">PAUSA 🎀</button>
+                </div>
             </div>
         </div>
     </div>
@@ -175,67 +190,3 @@
             
             sentences = fullText.match(/[^.!?]+[.!?]+|\n/g) || [fullText];
             sentences = sentences.map(s => s.trim()).filter(s => s.length > 1);
-
-            const area = document.getElementById('content-area');
-            area.innerHTML = sentences.map((s, i) => `<span id="s-${i}" class="sentence" onclick="readSentence(${i})">${s} </span>`).join('');
-
-            if (b.savedIndex !== undefined && b.savedIndex !== -1) {
-                lastReadIdx = b.savedIndex;
-                setTimeout(() => {
-                    const el = document.getElementById(`s-${lastReadIdx}`);
-                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 500);
-            }
-        }
-
-        function readSentence(index) {
-            synth.cancel();
-            const el = document.getElementById(`s-${index}`);
-            if (!el) return;
-            document.querySelectorAll('.sentence').forEach(s => s.classList.remove('reading'));
-            el.classList.add('reading');
-            lastReadIdx = index;
-            const utter = new SpeechSynthesisUtterance(sentences[index]);
-            utter.lang = 'it-IT';
-            utter.onend = () => {
-                if(!isPaused) {
-                    const next = index + 1;
-                    if (sentences[next]) {
-                        readSentence(next);
-                        if (next % 2 === 0) {
-                            const nextEl = document.getElementById(`s-${next}`);
-                            if(nextEl) nextEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }
-                    }
-                }
-            };
-            synth.speak(utter);
-            isPaused = false;
-            document.getElementById('pauseBtn').innerText = "PAUSA 🎀";
-        }
-
-        function togglePlay() {
-            if (synth.speaking && !isPaused) {
-                synth.cancel();
-                isPaused = true;
-                document.getElementById('pauseBtn').innerText = "RIPRENDI ✨";
-            } else if (lastReadIdx !== -1) {
-                readSentence(lastReadIdx);
-            } else {
-                readSentence(0);
-            }
-        }
-
-        async function saveBookmark() {
-            if (lastReadIdx !== -1 && currentBookId) {
-                const b = await localforage.getItem(currentBookId);
-                b.savedIndex = lastReadIdx;
-                await localforage.setItem(currentBookId, b);
-                alert("Salvato! 📌");
-            }
-        }
-
-        renderLibrary();
-    </script>
-</body>
-</html>
