@@ -2,196 +2,181 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Piper Magic Reader 🎀</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lettore Pulito</title>
     <script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
     <style>
-        :root { --bg: #fff0f6; --text: #70133a; --accent: #ff85a2; --btn-pink: #ffc2d1; }
+        :root { --bg: #fdf6e3; --text: #2c3e50; --accent: #d33682; }
+        body { font-family: 'Georgia', serif; margin: 0; background: var(--bg); color: var(--text); }
         
-        body { 
-            font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); 
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 100 100'%3E%3Ctext y='30' x='10' font-size='18' opacity='0.2'%3E✨%3C/text%3E%3Ctext y='70' x='60' font-size='18' opacity='0.2'%3E🎀%3C/text%3E%3C/svg%3E");
-            color: var(--text); overflow-x: hidden;
-        }
-
-        /* LIBRERIA: CELLE LARGHE */
-        #library-view { padding: 20px; text-align: center; padding-bottom: 150px; }
-        #library { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; max-width: 1100px; margin: 20px auto; }
-        .book-item { background: rgba(255, 255, 255, 0.8); padding: 35px; border-radius: 25px; position: relative; border: 2px solid var(--accent); cursor: pointer; font-weight: bold; font-size: 1.3em; }
-        .delete-btn { position: absolute; top: -12px; right: -12px; background: #ff4d6d; color: white; border: none; border-radius: 50%; width: 40px; height: 40px; font-weight: bold; font-size: 20px; }
-
-        /* TASTO + GIGANTE */
-        .add-btn { position: fixed; bottom: 30px; right: 30px; width: 90px; height: 90px; border-radius: 50%; font-size: 50px; background: var(--accent); border: 4px solid white; color: white; cursor: pointer; z-index: 2000; box-shadow: 0 8px 20px rgba(255,133,162,0.4); }
-
-        /* LETTORE */
-        #reader-view { display: none; padding: 15px; padding-bottom: 500px; } 
-        #content-area { max-width: 650px; margin: 0 auto; line-height: 1.8; font-size: 1.5em; font-family: 'Georgia', serif; background: rgba(255, 255, 255, 0.4); padding: 30px; border-radius: 30px; }
-        .sentence { display: inline; cursor: pointer; padding: 2px 5px; border-radius: 8px; }
-        .reading { background: #ffdeeb; border-bottom: 5px solid #ff477e; font-weight: bold; }
-
-        /* CONTROLLI (Dimensioni richieste da te) */
-        #controls { position: fixed; bottom: 0; left: 0; width: 100%; background: white; z-index: 5000; display: flex; flex-direction: column; border-top: 3px solid var(--accent); }
-        .ui-btn { width: 100%; border: none; font-weight: 900; text-transform: uppercase; cursor: pointer; color: var(--text); display: flex; align-items: center; justify-content: center; }
-
-        #backBtn { height: 100px; background: #fff; font-size: 22px; border-bottom: 3px solid var(--bg); }
-        #markBtn { height: 150px; background: #e3f2fd; color: #1976d2; font-size: 22px; border-bottom: 5px solid var(--bg); }
-        #pauseBtn { height: 150px; background: var(--btn-pink); font-size: 22px; }
-
-        /* SCHERMATA CARICAMENTO */
-        #loader-ai { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 6000; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; }
-        .progress-bar { width: 80%; max-width: 300px; height: 15px; background: white; border-radius: 10px; border: 3px solid var(--accent); margin-top: 25px; overflow: hidden; }
-        #progress-fill { width: 0%; height: 100%; background: var(--accent); transition: width 0.3s; }
+        /* Libreria */
+        #library-view { padding: 20px; text-align: center; }
+        #library { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; margin-top: 20px; }
+        .book-item { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); cursor: pointer; border: 1px solid #eee; transition: 0.2s; }
+        .book-item:active { transform: scale(0.98); }
+        
+        /* Lettore */
+        #reader-view { display: none; padding: 20px; padding-bottom: 200px; }
+        #content-area { max-width: 700px; margin: 0 auto; line-height: 1.8; font-size: 1.15em; }
+        #content-area p { cursor: pointer; padding: 12px; border-radius: 8px; margin: 8px 0; transition: background 0.2s; }
+        #content-area p.reading { background: #fff9c4; border-left: 5px solid var(--accent); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        
+        /* Controlli */
+        #controls { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 20px; box-shadow: 0 -5px 20px rgba(0,0,0,0.1); z-index: 1000; border-radius: 20px 20px 0 0; }
+        .btns { display: flex; justify-content: space-around; gap: 15px; margin-bottom: 15px; }
+        button { flex: 1; padding: 15px; border-radius: 30px; border: none; background: var(--accent); color: white; font-weight: bold; font-size: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .btn-sec { background: #586e75; }
+        select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd; background: #f9f9f9; font-size: 14px; }
+        .back-link { display: inline-block; margin-bottom: 25px; color: var(--accent); text-decoration: none; font-weight: bold; font-size: 1.1em; }
     </style>
 </head>
 <body>
 
-    <div id="loader-ai">
-        <h2>✨ Download Piper Michael... 🎀</h2>
-        <p>Sto preparando la voce maschile.<br>L'attesa varrà il risultato! ✨</p>
-        <div class="progress-bar"><div id="progress-fill"></div></div>
-        <button onclick="document.getElementById('loader-ai').style.display='none'" style="margin-top:30px; padding:10px; border-radius:15px; border:1px solid var(--accent); background:white;">Usa voce di sistema nel frattempo</button>
-    </div>
-
     <div id="library-view">
-        <h1>✨ My Stories 🎀</h1>
-        <div id="library">Tocca + per aggiungere un libro! ✨</div>
-        <button class="add-btn" onclick="document.getElementById('fileInput').click()">+</button>
-        <input type="file" id="fileInput" style="display:none" accept=".html,.htm,.txt" onchange="window.importFile(event)">
+        <h1>📚 La mia Libreria</h1>
+        <div id="library"></div>
+        <button style="position:fixed; bottom:30px; right:30px; width:65px; height:65px; border-radius:50%; font-size:35px;" onclick="document.getElementById('fileInput').click()">+</button>
+        <input type="file" id="fileInput" style="display:none" accept=".html,.htm,.txt" onchange="importFile(event)">
     </div>
 
     <div id="reader-view">
+        <a href="#" class="back-link" onclick="location.reload()">← Esci dal libro</a>
         <div id="content-area"></div>
+        
         <div id="controls">
-            <button id="backBtn" class="ui-btn" onclick="location.reload()">⬅ TORNA ALLA LIBRERIA ✨</button>
-            <button id="markBtn" class="ui-btn" onclick="window.saveBookmark()">📌 SEGNA POSIZIONE</button>
-            <button id="pauseBtn" class="ui-btn" onclick="window.togglePlay()">PAUSA / PLAY 🎀</button>
+            <div id="status" style="font-size: 0.85em; text-align: center; margin-bottom: 10px; color: #888; font-style: italic;">Tocca un paragrafo per iniziare</div>
+            <div class="btns">
+                <button class="btn-sec" onclick="saveBookmark()">📌 Segna</button>
+                <button id="pauseBtn" onclick="stopSpeech()">Pausa</button>
+            </div>
+            <select id="voiceSelect"></select>
         </div>
     </div>
 
-    <script type="module">
-        // Usiamo Transformers.js per caricare un modello Piper-like (ONNX)
-        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.1';
-        
-        env.allowLocalModels = false;
-        env.useBrowserCache = true;
-
-        let tts = null;
+    <script>
+        const synth = window.speechSynthesis;
         let currentBookId = null;
-        let lastReadIdx = -1;
-        let isPaused = false;
-        let sentences = [];
-        let audio = new Audio();
+        let lastReadPara = null;
 
-        // 1. CARICAMENTO PIPER (Sorgente ONNX Community)
-        async function loadPiper() {
-            try {
-                tts = await pipeline('text-to-speech', 'Xenova/it_IT-riccardo-medium', {
-                    progress_callback: (p) => {
-                        if (p.status === 'progress') {
-                            document.getElementById('progress-fill').style.width = p.progress.toFixed(1) + '%';
-                        }
-                    }
-                });
-                document.getElementById('loader-ai').style.display = 'none';
-                renderLibrary();
-            } catch (e) {
-                console.error("Piper fallito:", e);
-                document.getElementById('loader-ai').style.display = 'none';
-            }
+        function populateVoices() {
+            const voices = synth.getVoices();
+            const select = document.getElementById('voiceSelect');
+            const filtered = voices.filter(v => v.lang.includes('it') || v.lang.includes('en'));
+            select.innerHTML = filtered.map(v => `<option value="${v.name}">${v.name} (${v.lang})</option>`).join('');
         }
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = populateVoices;
+        }
+        populateVoices();
 
-        // 2. GESTIONE LIBRI
-        window.importFile = async function(e) {
+        async function importFile(e) {
             const file = e.target.files[0];
             if (!file) return;
             const text = await file.text();
-            const id = "bk_" + Date.now();
+            const id = "h_" + Date.now();
             await localforage.setItem(id, { id, title: file.name.replace('.html',''), content: text, savedIndex: 0 });
             renderLibrary();
-        };
+        }
 
         async function renderLibrary() {
             const lib = document.getElementById('library');
+            lib.innerHTML = "";
             const keys = await localforage.keys();
-            const bKeys = keys.filter(k => k.startsWith("bk_"));
-            if (bKeys.length > 0) lib.innerHTML = "";
-            for (let k of bKeys) {
-                const b = await localforage.getItem(k);
-                const div = document.createElement('div');
-                div.className = 'book-item';
-                div.innerHTML = `<button class="delete-btn" onclick="event.stopPropagation(); window.del('${b.id}')">×</button>📖<br>${b.title}`;
-                div.onclick = () => openBook(b.id);
-                lib.appendChild(div);
+            for (let k of keys) {
+                if (k.startsWith("h_")) {
+                    const b = await localforage.getItem(k);
+                    const div = document.createElement('div');
+                    div.className = 'book-item';
+                    div.innerHTML = `📖<br><small>${b.title}</small>`;
+                    div.onclick = () => openBook(b.id);
+                    lib.appendChild(div);
+                }
             }
         }
 
-        window.del = async (id) => { if(confirm("Eliminare? ✨")) { await localforage.removeItem(id); renderLibrary(); } };
-
+        // --- IL "FILTRO MAGICO" PER PULIRE IL CODICE ---
         async function openBook(id) {
             const b = await localforage.getItem(id);
             currentBookId = id;
             document.getElementById('library-view').style.display = 'none';
             document.getElementById('reader-view').style.display = 'block';
+            
+            const area = document.getElementById('content-area');
+            
+            // 1. Usiamo un parser vero per estrarre solo il testo
             const parser = new DOMParser();
             const doc = parser.parseFromString(b.content, 'text/html');
-            const fullText = doc.body.innerText;
-            sentences = fullText.match(/[^.!?]+[.!?]+|\n/g) || [fullText];
-            sentences = sentences.map(s => s.trim()).filter(s => s.length > 2);
-            document.getElementById('content-area').innerHTML = sentences.map((s, i) => `<span id="s-${i}" class="sentence" onclick="window.readFrom(${i})">${s} </span>`).join('');
+            
+            // 2. Rimuoviamo script e stili che sporcano il testo
+            const cleanUp = doc.querySelectorAll('script, style, meta, link');
+            cleanUp.forEach(el => el.remove());
+
+            // 3. Prendiamo solo il testo pulito e lo dividiamo in paragrafi reali
+            // Usiamo il testo del body, diviso per i blocchi di testo che hanno senso
+            const textContent = doc.body.innerText
+                .split('\n')
+                .map(p => p.trim())
+                .filter(p => p.length > 5); // Scartiamo frammenti troppo corti o vuoti
+            
+            area.innerHTML = textContent.map((p, index) => 
+                `<p id="p-${index}" onclick="readParagraph(${index})">${p}</p>`
+            ).join('');
+
             if (b.savedIndex) {
-                lastReadIdx = b.savedIndex;
-                setTimeout(() => document.getElementById(`s-${lastReadIdx}`).scrollIntoView({ behavior: 'smooth', block: 'center' }), 400);
+                const el = document.getElementById(`p-${b.savedIndex}`);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    el.classList.add('reading');
+                    lastReadPara = el;
+                    lastReadPara.index = b.savedIndex;
+                }
             }
         }
 
-        // 3. LETTURA
-        window.readFrom = async (index) => {
-            isPaused = false;
-            if (index >= sentences.length) return;
-            lastReadIdx = index;
-            document.querySelectorAll('.sentence').forEach(s => s.classList.remove('reading'));
-            const el = document.getElementById(`s-${index}`);
-            if (el) el.classList.add('reading');
+        function readParagraph(index) {
+            stopSpeech();
+            const el = document.getElementById(`p-${index}`);
+            if (!el) return;
 
-            if (tts) {
-                try {
-                    // Riccardo è la voce maschile Piper standard di alta qualità
-                    const output = await tts(sentences[index]);
-                    const blob = new Blob([output.audio], { type: 'audio/wav' });
-                    audio.src = URL.createObjectURL(blob);
-                    audio.play();
-                    audio.onended = () => { if (!isPaused) window.readFrom(index + 1); };
-                } catch (err) { window.fallback(index); }
-            } else {
-                window.fallback(index);
-            }
-            if (index % 2 === 0) document.getElementById(`s-${index}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
-        };
+            if (lastReadPara) lastReadPara.classList.remove('reading');
+            el.classList.add('reading');
+            lastReadPara = el;
+            lastReadPara.index = index;
 
-        window.fallback = (index) => {
-            window.speechSynthesis.cancel();
-            const utter = new SpeechSynthesisUtterance(sentences[index]);
-            utter.lang = 'it-IT';
-            utter.onend = () => { if (!isPaused) window.readFrom(index + 1); };
-            window.speechSynthesis.speak(utter);
-        };
+            const utter = new SpeechSynthesisUtterance(el.innerText);
+            const selectedVoiceName = document.getElementById('voiceSelect').value;
+            utter.voice = synth.getVoices().find(v => v.name === selectedVoiceName);
+            
+            utter.onend = () => {
+                // Passa al prossimo paragrafo automaticamente
+                const next = index + 1;
+                if (document.getElementById(`p-${next}`)) {
+                    readParagraph(next);
+                    // Scroll automatico per seguire la lettura
+                    document.getElementById(`p-${next}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            };
 
-        window.togglePlay = () => {
-            if (tts && !audio.paused) { audio.pause(); isPaused = true; }
-            else if (lastReadIdx !== -1) window.readFrom(lastReadIdx);
-        };
+            synth.speak(utter);
+            document.getElementById('status').innerText = "📖 Sto leggendo...";
+        }
 
-        window.saveBookmark = async () => {
-            if (lastReadIdx !== -1) {
+        function stopSpeech() {
+            synth.cancel();
+            document.getElementById('status').innerText = "⏸ In pausa";
+        }
+
+        async function saveBookmark() {
+            if (lastReadPara && currentBookId) {
                 const b = await localforage.getItem(currentBookId);
-                b.savedIndex = lastReadIdx;
+                b.savedIndex = lastReadPara.index;
                 await localforage.setItem(currentBookId, b);
-                alert("📌 Segnalibro Salvato!");
+                document.getElementById('status').innerText = "📌 Posizione salvata!";
+                setTimeout(() => { document.getElementById('status').innerText = "In pausa"; }, 2000);
             }
-        };
+        }
 
         renderLibrary();
-        loadPiper();
     </script>
 </body>
 </html>
