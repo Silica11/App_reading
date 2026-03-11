@@ -3,124 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magical Reader 🎀</title>
+    <title>Magical Kokoro Reader 🎀</title>
     <script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
+    <script type="module">
+        import { pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.1';
+        window.pipeline = pipeline;
+    </script>
     <style>
-        :root { 
-            --bg: #fff0f6; 
-            --text: #70133a; 
-            --accent: #ff85a2; 
-            --btn-pink: #ffc2d1;
-        }
-        
+        :root { --bg: #fff0f6; --text: #70133a; --accent: #ff85a2; --btn-pink: #ffc2d1; }
         body { 
-            font-family: 'Segoe UI', sans-serif; 
-            margin: 0; 
-            background: var(--bg); 
+            font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); 
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 100 100'%3E%3Ctext y='30' x='10' font-size='18' opacity='0.2'%3E✨%3C/text%3E%3Ctext y='70' x='60' font-size='18' opacity='0.2'%3E🎀%3C/text%3E%3C/svg%3E");
-            color: var(--text);
-            overflow-x: hidden;
+            color: var(--text); overflow-x: hidden;
         }
 
-        /* LIBRERIA */
+        /* Overlay Caricamento AI */
+        #loader-ai { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: var(--bg); z-index: 9999; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; text-align: center; padding: 20px;
+        }
+        .progress-bar { width: 200px; height: 10px; background: white; border-radius: 5px; border: 2px solid var(--accent); margin-top: 15px; overflow: hidden; }
+        #progress-fill { width: 0%; height: 100%; background: var(--accent); transition: width 0.3s; }
+
+        /* Libreria */
         #library-view { padding: 20px; text-align: center; }
-        #library { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 15px; 
-            max-width: 1000px; 
-            margin: 20px auto; 
-        }
-        
-        .book-item { 
-            background: rgba(255, 255, 255, 0.7); 
-            padding: 20px; border-radius: 20px; position: relative; 
-            border: 2px solid var(--accent); cursor: pointer;
-            font-weight: bold; font-size: 0.9em;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-        }
+        #library { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; margin-top: 20px; }
+        .book-item { background: rgba(255, 255, 255, 0.7); padding: 20px; border-radius: 20px; position: relative; border: 2px solid var(--accent); cursor: pointer; font-weight: bold; }
+        .delete-btn { position: absolute; top: -8px; right: -8px; background: #ff4d6d; color: white; border: none; border-radius: 50%; width: 25px; height: 25px; font-weight: bold; }
 
-        .add-btn {
-            position: fixed; bottom: 20px; right: 20px; 
-            width: 60px; height: 60px; 
-            border-radius: 50%; font-size: 35px; background: var(--accent); 
-            border: 4px solid white; color: white; cursor: pointer;
-            z-index: 2000; display: flex; align-items: center; justify-content: center;
-        }
-
-        /* LETTORE */
+        /* Lettore */
         #reader-view { display: none; padding: 15px; padding-bottom: 250px; }
-        
-        #content-area { 
-            max-width: 600px; 
-            margin: 0 auto; 
-            line-height: 1.8; 
-            font-size: 1.4em; 
-            font-family: 'Georgia', serif;
-            background: rgba(255, 255, 255, 0.5);
-            padding: 20px;
-            border-radius: 25px;
-        }
-        
+        #content-area { max-width: 600px; margin: 0 auto; line-height: 1.8; font-size: 1.4em; font-family: 'Georgia', serif; background: rgba(255, 255, 255, 0.5); padding: 20px; border-radius: 25px; }
         .sentence { display: inline; cursor: pointer; padding: 2px 4px; border-radius: 8px; transition: 0.2s; }
         .reading { background: #ffdeeb; border-bottom: 3px solid #ff477e; font-weight: bold; }
 
-        /* CONTROLLI SPOSTATI A SINISTRA E RIMPICCIOLITI */
-        #controls { 
-            position: fixed; 
-            bottom: 20px;
-            left: 15px; 
-            width: 240px; 
-            background: rgba(255, 255, 255, 0.96); 
-            padding: 10px; 
-            z-index: 1000;
-            border-radius: 20px;
-            box-shadow: 0 8px 20px rgba(255, 133, 162, 0.3);
-            display: flex; 
-            flex-direction: column; 
-            gap: 8px;
-        }
-        
+        /* Controlli a sinistra */
+        #controls { position: fixed; bottom: 20px; left: 15px; width: 240px; background: rgba(255, 255, 255, 0.96); padding: 10px; z-index: 1000; border-radius: 20px; box-shadow: 0 8px 20px rgba(255, 133, 162, 0.3); display: flex; flex-direction: column; gap: 8px; }
         .btn-row { display: flex; gap: 8px; width: 100%; }
-        
-        .ui-btn { 
-            flex: 1; 
-            padding: 12px 5px; 
-            border-radius: 12px; 
-            border: 2px solid white;
-            font-weight: bold; 
-            font-size: 11px; 
-            cursor: pointer;
-            box-shadow: 0 3px 0 var(--accent); 
-            text-transform: uppercase;
-            color: var(--text);
-            white-space: nowrap;
-            background: var(--btn-pink);
-        }
-
+        .ui-btn { flex: 1; padding: 12px 5px; border-radius: 12px; border: 2px solid white; font-weight: bold; font-size: 11px; cursor: pointer; box-shadow: 0 3px 0 var(--accent); text-transform: uppercase; color: var(--text); background: var(--btn-pink); }
         #backBtn { background: #fff; font-size: 10px; padding: 8px; }
-        #markBtn { background: #e3f2fd; color: #1976d2; box-shadow: 0 3px 0 #90caf9; }
-        #pauseBtn { background: var(--btn-pink); }
-
-        .delete-btn {
-            position: absolute; top: -8px; right: -8px; background: #ff4d6d;
-            color: white; border: none; border-radius: 50%; width: 25px; height: 25px;
-            display: flex; align-items: center; justify-content: center; font-weight: bold;
-        }
+        
+        .add-btn { position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; border-radius: 50%; font-size: 35px; background: var(--accent); border: 4px solid white; color: white; cursor: pointer; z-index: 2000; }
     </style>
 </head>
 <body>
 
+    <div id="loader-ai">
+        <h2 id="ai-status">🎀 Sto caricando la voce magica... 🎀</h2>
+        <p style="font-size: 0.8em;">Potrebbe volerci un minuto, lo faccio solo la prima volta! ✨</p>
+        <div class="progress-bar"><div id="progress-fill"></div></div>
+    </div>
+
     <div id="library-view">
-        <h1 style="margin-top: 40px;">✨ My Stories 🎀</h1>
-        <div id="library">Caricamento libreria...</div>
+        <h1 style="margin-top: 40px;">✨ My Library 🎀</h1>
+        <div id="library"></div>
         <button class="add-btn" onclick="document.getElementById('fileInput').click()">+</button>
         <input type="file" id="fileInput" style="display:none" accept=".html,.htm,.txt" onchange="importFile(event)">
     </div>
 
     <div id="reader-view">
         <div id="content-area"></div>
-        
         <div id="controls">
             <button id="backBtn" class="ui-btn" onclick="location.reload()">⬅ LIBRERIA ✨</button>
             <div class="btn-row">
@@ -130,19 +73,28 @@
         </div>
     </div>
 
-    <script>
-        const synth = window.speechSynthesis;
+    <script type="module">
+        let tts;
         let currentBookId = null;
         let lastReadIdx = -1;
         let isPaused = false;
         let sentences = [];
+        let audioPlayer = new Audio();
 
-        // Inizializzazione sicura della libreria
-        async function init() {
+        // 1. INIZIALIZZAZIONE KOKORO
+        async function loadAI() {
             try {
-                await renderLibrary();
+                // Carichiamo il modello Kokoro-82M ottimizzato per il web
+                tts = await window.pipeline('text-to-speech', 'Xenova/kokoro-v0_19', {
+                    progress_callback: (p) => {
+                        if (p.progress) document.getElementById('progress-fill').style.width = p.progress + '%';
+                    }
+                });
+                document.getElementById('loader-ai').style.display = 'none';
+                renderLibrary();
             } catch (e) {
-                document.getElementById('library').innerText = "Tocca il + per aggiungere un libro! ✨";
+                document.getElementById('ai-status').innerText = "Errore nel caricamento. Ricarica la pagina! ✨";
+                console.error(e);
             }
         }
 
@@ -151,7 +103,7 @@
             if (!file) return;
             const text = await file.text();
             const id = "h_" + Date.now();
-            await localforage.setItem(id, { id, title: file.name.replace('.html','').replace('.htm',''), content: text, savedIndex: 0 });
+            await localforage.setItem(id, { id, title: file.name.replace('.html',''), content: text, savedIndex: 0 });
             renderLibrary();
         }
 
@@ -159,28 +111,19 @@
             const lib = document.getElementById('library');
             const keys = await localforage.keys();
             const bookKeys = keys.filter(k => k.startsWith("h_"));
-            
-            if (bookKeys.length === 0) {
-                lib.innerHTML = "<p>Nessun libro trovato. <br>Aggiungine uno con il tasto + 🎀</p>";
-                return;
-            }
-
-            lib.innerHTML = "";
+            lib.innerHTML = bookKeys.length === 0 ? "<p>Aggiungi un libro! 🎀</p>" : "";
             for (let k of bookKeys) {
                 const b = await localforage.getItem(k);
                 const div = document.createElement('div');
                 div.className = 'book-item';
-                div.innerHTML = `<button class="delete-btn" onclick="event.stopPropagation(); deleteBook('${b.id}')">×</button>📖<br>${b.title}`;
+                div.innerHTML = `<button class="delete-btn" onclick="event.stopPropagation(); window.deleteBook('${b.id}')">×</button>📖<br>${b.title}`;
                 div.onclick = () => openBook(b.id);
                 lib.appendChild(div);
             }
         }
 
-        async function deleteBook(id) {
-            if(confirm("Vuoi eliminare questo libro? ✨")) { 
-                await localforage.removeItem(id); 
-                renderLibrary(); 
-            }
+        window.deleteBook = async (id) => {
+            if(confirm("Eliminare? ✨")) { await localforage.removeItem(id); renderLibrary(); }
         }
 
         async function openBook(id) {
@@ -188,79 +131,63 @@
             currentBookId = id;
             document.getElementById('library-view').style.display = 'none';
             document.getElementById('reader-view').style.display = 'block';
-            
             const parser = new DOMParser();
             const doc = parser.parseFromString(b.content, 'text/html');
             const fullText = doc.body.innerText;
-            
-            // Divisione intelligente per frasi
             sentences = fullText.match(/[^.!?]+[.!?]+|\n/g) || [fullText];
-            sentences = sentences.map(s => s.trim()).filter(s => s.length > 1);
-
-            const area = document.getElementById('content-area');
-            area.innerHTML = sentences.map((s, i) => `<span id="s-${i}" class="sentence" onclick="readSentence(${i})">${s} </span>`).join('');
-
-            if (b.savedIndex !== undefined && b.savedIndex !== -1) {
+            sentences = sentences.map(s => s.trim()).filter(s => s.length > 2);
+            document.getElementById('content-area').innerHTML = sentences.map((s, i) => `<span id="s-${i}" class="sentence" onclick="window.readSentence(${i})">${s} </span>`).join('');
+            if (b.savedIndex) {
                 lastReadIdx = b.savedIndex;
-                setTimeout(() => {
-                    const el = document.getElementById(`s-${lastReadIdx}`);
-                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 300);
+                setTimeout(() => document.getElementById(`s-${lastReadIdx}`).scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
             }
         }
 
-        function readSentence(index) {
-            synth.cancel();
+        // 2. LETTURA CON KOKORO
+        window.readSentence = async (index) => {
+            audioPlayer.pause();
             const el = document.getElementById(`s-${index}`);
             if (!el) return;
-
             document.querySelectorAll('.sentence').forEach(s => s.classList.remove('reading'));
             el.classList.add('reading');
             lastReadIdx = index;
 
-            const utter = new SpeechSynthesisUtterance(sentences[index]);
-            utter.lang = 'it-IT';
+            // Generazione audio AI
+            const output = await tts(sentences[index], { voice: 'af_heart' }); // 'af_heart' è una voce femminile dolce
             
-            utter.onend = () => {
-                if(!isPaused) {
-                    const next = index + 1;
-                    if (sentences[next]) {
-                        readSentence(next);
-                        if (next % 2 === 0) {
-                            const nextEl = document.getElementById(`s-${next}`);
-                            if(nextEl) nextEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }
-                    }
-                }
+            // Riproduzione
+            const blob = new Blob([output.audio], { type: 'audio/wav' });
+            audioPlayer.src = URL.createObjectURL(blob);
+            audioPlayer.play();
+
+            audioPlayer.onended = () => {
+                if(!isPaused) window.readSentence(index + 1);
+                if (index % 2 === 0) document.getElementById(`s-${index+1}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
             };
-            synth.speak(utter);
-            isPaused = false;
             document.getElementById('pauseBtn').innerText = "PAUSA 🎀";
+            isPaused = false;
         }
 
-        function togglePlay() {
-            if (synth.speaking && !isPaused) {
-                synth.cancel();
+        window.togglePlay = () => {
+            if (!audioPlayer.paused) {
+                audioPlayer.pause();
                 isPaused = true;
                 document.getElementById('pauseBtn').innerText = "RIPRENDI ✨";
             } else if (lastReadIdx !== -1) {
-                readSentence(lastReadIdx);
-            } else {
-                readSentence(0);
+                window.readSentence(lastReadIdx);
             }
-        }
+        };
 
-        async function saveBookmark() {
-            if (lastReadIdx !== -1 && currentBookId) {
+        window.saveBookmark = async () => {
+            if (lastReadIdx !== -1) {
                 const b = await localforage.getItem(currentBookId);
                 b.savedIndex = lastReadIdx;
                 await localforage.setItem(currentBookId, b);
-                alert("Posizione salvata! 📌");
+                alert("Salvato! 📌");
             }
-        }
+        };
 
-        // Avvio app
-        init();
+        loadAI();
     </script>
 </body>
 </html>
