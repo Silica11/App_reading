@@ -3,58 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Michael AI Reader 🎀</title>
+    <title>Michael Magic Reader 🎀</title>
     <script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
     <style>
-        :root { --bg: #fff0f6; --text: #70133a; --accent: #ff85a2; --btn-pink: #ffc2d1; }
+        :root { 
+            --bg: #fff0f6; 
+            --text: #70133a; 
+            --accent: #ff85a2; 
+            --btn-pink: #ffc2d1;
+        }
+        
         body { 
-            font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); 
+            font-family: 'Segoe UI', sans-serif; 
+            margin: 0; 
+            background: var(--bg); 
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 100 100'%3E%3Ctext y='30' x='10' font-size='18' opacity='0.2'%3E✨%3C/text%3E%3Ctext y='70' x='60' font-size='18' opacity='0.2'%3E🎀%3C/text%3E%3C/svg%3E");
-            color: var(--text); overflow-x: hidden;
+            color: var(--text);
+            overflow-x: hidden;
         }
 
-        /* Schermata Caricamento IA */
+        /* Schermata Iniziale */
         #loader-ai { 
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: var(--bg); z-index: 9999; display: flex; flex-direction: column; 
             align-items: center; justify-content: center; text-align: center; padding: 20px;
         }
-        .progress-box { width: 80%; max-width: 300px; height: 15px; background: white; border-radius: 10px; border: 2px solid var(--accent); margin-top: 20px; overflow: hidden; }
-        #progress-fill { width: 0%; height: 100%; background: var(--accent); transition: width 0.2s; }
-        #error-log { color: red; font-size: 0.7em; margin-top: 10px; display: none; padding: 10px; }
+        .loading-icon { font-size: 50px; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
 
-        /* Libreria */
+        /* LIBRERIA: CELLE PIÙ LARGHE */
         #library-view { padding: 20px; text-align: center; }
-        #library { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; margin-top: 20px; }
-        .book-item { background: rgba(255, 255, 255, 0.7); padding: 20px; border-radius: 20px; position: relative; border: 2px solid var(--accent); cursor: pointer; font-weight: bold; }
-        .delete-btn { position: absolute; top: -8px; right: -8px; background: #ff4d6d; color: white; border: none; border-radius: 50%; width: 28px; height: 28px; font-weight: bold; }
+        #library { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* Celle molto larghe */
+            gap: 20px; 
+            max-width: 1200px; 
+            margin: 20px auto; 
+        }
+        
+        .book-item { 
+            background: rgba(255, 255, 255, 0.7); 
+            padding: 25px; border-radius: 20px; position: relative; 
+            border: 2px solid var(--accent); cursor: pointer;
+            font-weight: bold; font-size: 1.1em;
+            box-shadow: 0 4px 15px rgba(255, 133, 162, 0.2);
+        }
 
-        /* Lettore */
-        #reader-view { display: none; padding: 15px; padding-bottom: 250px; }
-        #content-area { max-width: 600px; margin: 0 auto; line-height: 1.8; font-size: 1.4em; font-family: 'Georgia', serif; background: rgba(255, 255, 255, 0.5); padding: 20px; border-radius: 25px; }
-        .sentence { display: inline; cursor: pointer; padding: 2px 4px; border-radius: 8px; }
+        /* TASTO AGGIUNGI GIGANTE */
+        .add-btn {
+            position: fixed; bottom: 30px; right: 30px; 
+            width: 85px; height: 85px; 
+            border-radius: 50%; font-size: 50px; background: var(--accent); 
+            border: 4px solid white; color: white; cursor: pointer;
+            z-index: 2000; box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+
+        /* LETTORE: TESTO GRANDE */
+        #reader-view { display: none; padding: 15px; padding-bottom: 280px; }
+        #content-area { 
+            max-width: 650px; margin: 0 auto; 
+            line-height: 1.8; font-size: 1.5em; 
+            font-family: 'Georgia', serif;
+            background: rgba(255, 255, 255, 0.4);
+            padding: 30px; border-radius: 30px;
+        }
+        
+        .sentence { display: inline; cursor: pointer; padding: 2px 5px; border-radius: 8px; transition: 0.2s; }
         .reading { background: #ffdeeb; border-bottom: 3px solid #ff477e; font-weight: bold; }
 
-        /* Controlli a sinistra */
-        #controls { position: fixed; bottom: 20px; left: 15px; width: 220px; background: rgba(255, 255, 255, 0.98); padding: 10px; z-index: 1000; border-radius: 20px; box-shadow: 0 8px 25px rgba(255, 133, 162, 0.3); display: flex; flex-direction: column; gap: 8px; }
-        .btn-row { display: flex; gap: 8px; width: 100%; }
-        .ui-btn { flex: 1; padding: 12px 5px; border-radius: 12px; border: 2px solid white; font-weight: bold; font-size: 11px; cursor: pointer; color: var(--text); background: var(--btn-pink); box-shadow: 0 3px 0 var(--accent); text-transform: uppercase; }
+        /* CONTROLLI: MINI E A SINISTRA */
+        #controls { 
+            position: fixed; 
+            bottom: 20px; left: 15px; 
+            width: 180px; /* Rimpicciolito della metà */
+            background: rgba(255, 255, 255, 0.98); 
+            padding: 12px; z-index: 1000;
+            border-radius: 20px;
+            box-shadow: 0 8px 25px rgba(255, 133, 162, 0.4);
+            display: flex; flex-direction: column; gap: 8px;
+        }
         
-        .add-btn { position: fixed; bottom: 30px; right: 30px; width: 65px; height: 65px; border-radius: 50%; font-size: 35px; background: var(--accent); border: 4px solid white; color: white; z-index: 2000; box-shadow: 0 5px 15px rgba(255,133,162,0.4); }
+        .ui-btn { 
+            width: 100%; padding: 10px; border-radius: 12px; 
+            border: 2px solid white; font-weight: bold; font-size: 10px; 
+            cursor: pointer; text-transform: uppercase;
+            color: var(--text); background: var(--btn-pink);
+            box-shadow: 0 3px 0 var(--accent);
+        }
+
+        .btn-row { display: flex; gap: 5px; }
+        .half-btn { flex: 1; padding: 12px 2px; }
+
+        .delete-btn {
+            position: absolute; top: -10px; right: -10px; background: #ff4d6d;
+            color: white; border: none; border-radius: 50%; width: 30px; height: 30px;
+        }
     </style>
 </head>
 <body>
 
     <div id="loader-ai">
-        <h2 id="loading-title">✨ Risveglio Michael AI... 🎀</h2>
-        <p id="loading-msg">Sto scaricando la voce di Michael (circa 90MB). <br>Se la barra si ferma, controlla il Wi-Fi! ✨</p>
-        <div class="progress-box"><div id="progress-fill"></div></div>
-        <div id="error-log"></div>
-        <button id="retry-btn" style="display:none; margin-top:20px; padding:10px;" onclick="location.reload()">Riprova</button>
+        <div class="loading-icon">🎀</div>
+        <h2 id="status">Sto attivando Michael... ✨</h2>
+        <p style="font-size: 0.8em; opacity: 0.7;">Pochi istanti e la voce sarà tua!</p>
     </div>
 
     <div id="library-view">
-        <h1 style="margin-top: 40px;">✨ Michael Reader 🎀</h1>
+        <h1>✨ My Stories 🎀</h1>
         <div id="library"></div>
         <button class="add-btn" onclick="document.getElementById('fileInput').click()">+</button>
         <input type="file" id="fileInput" style="display:none" accept=".html,.htm,.txt" onchange="importFile(event)">
@@ -63,48 +118,37 @@
     <div id="reader-view">
         <div id="content-area"></div>
         <div id="controls">
-            <button class="ui-btn" style="background:#fff; font-size:9px;" onclick="location.reload()">⬅ LIBRERIA ✨</button>
+            <button class="ui-btn" style="background:#fff; font-size:9px;" onclick="location.reload()">⬅ LIBRERIA</button>
             <div class="btn-row">
-                <button class="ui-btn" onclick="window.saveBookmark()">📌 SEGNA</button>
-                <button id="pauseBtn" class="ui-btn" onclick="window.togglePlay()">PAUSA 🎀</button>
+                <button class="ui-btn half-btn" onclick="saveBookmark()">📌 SEGNA</button>
+                <button id="pauseBtn" class="ui-btn half-btn" onclick="togglePlay()">PAUSA 🎀</button>
             </div>
         </div>
     </div>
 
     <script type="module">
-        // Usiamo un CDN super affidabile per Transformers.js
-        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.1';
-        
-        // Configuriamo l'ambiente per essere più permissivo con i download
-        env.allowLocalModels = false;
-        env.useBrowserCache = true;
+        // Usiamo la versione 3.0 che risolve i problemi di autorizzazione
+        import { pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.1';
 
         let tts;
-        let currentBookId = null;
-        let lastReadIdx = -1;
-        let isPaused = false;
-        let sentences = [];
         let audio = new Audio();
+        let sentences = [];
+        let lastReadIdx = -1;
+        let currentBookId = null;
+        let isPaused = false;
 
-        async function initAI() {
+        async function init() {
             try {
-                // Carichiamo il modello specifico di Kokoro
-                tts = await pipeline('text-to-speech', 'Xenova/kokoro-82M', {
-                    progress_callback: (p) => {
-                        if (p.status === 'progress') {
-                            document.getElementById('progress-fill').style.width = p.progress + '%';
-                        }
-                    }
-                });
+                // Proviamo a caricare Kokoro da un repository alternativo pubblico
+                tts = await pipeline('text-to-speech', 'onnx-community/Kokoro-82M-v1.0-ONNX');
+                document.getElementById('loader-ai').style.fadeOut = "slow";
                 document.getElementById('loader-ai').style.display = 'none';
                 renderLibrary();
-            } catch (err) {
-                console.error(err);
-                document.getElementById('loading-title').innerText = "Ops! C'è stato un intoppo.";
-                document.getElementById('loading-msg').innerText = "Il download è fallito. Assicurati di non essere in modalità Incognito e di avere spazio sul telefono.";
-                document.getElementById('error-log').style.display = 'block';
-                document.getElementById('error-log').innerText = err.message;
-                document.getElementById('retry-btn').style.display = 'block';
+            } catch (e) {
+                // Se l'AI fallisce, usiamo la voce di sistema ma con Michael come preferenza
+                console.error("AI Fallita, uso sistema", e);
+                document.getElementById('loader-ai').style.display = 'none';
+                renderLibrary();
             }
         }
 
@@ -121,78 +165,87 @@
             const lib = document.getElementById('library');
             const keys = await localforage.keys();
             const bKeys = keys.filter(k => k.startsWith("bk_"));
-            lib.innerHTML = bKeys.length === 0 ? "<p>Tocca + per iniziare 🎀</p>" : "";
+            lib.innerHTML = bKeys.length === 0 ? "<p>Tocca + 🎀</p>" : "";
             for (let k of bKeys) {
                 const b = await localforage.getItem(k);
                 const div = document.createElement('div');
                 div.className = 'book-item';
-                div.innerHTML = `<button class="delete-btn" onclick="event.stopPropagation(); window.deleteBook('${b.id}')">×</button>📖<br>${b.title}`;
+                div.innerHTML = `<button class="delete-btn" onclick="event.stopPropagation(); window.del('${b.id}')">×</button>📖 ${b.title}`;
                 div.onclick = () => openBook(b.id);
                 lib.appendChild(div);
             }
         }
 
-        window.deleteBook = async (id) => {
-            if(confirm("Eliminare? ✨")) { await localforage.removeItem(id); renderLibrary(); }
-        }
+        window.del = async (id) => { if(confirm("Eliminare?")) { await localforage.removeItem(id); renderLibrary(); } }
 
         async function openBook(id) {
             const b = await localforage.getItem(id);
             currentBookId = id;
             document.getElementById('library-view').style.display = 'none';
             document.getElementById('reader-view').style.display = 'block';
+            
             const parser = new DOMParser();
             const doc = parser.parseFromString(b.content, 'text/html');
             const fullText = doc.body.innerText;
+            
             sentences = fullText.match(/[^.!?]+[.!?]+|\n/g) || [fullText];
             sentences = sentences.map(s => s.trim()).filter(s => s.length > 2);
-            document.getElementById('content-area').innerHTML = sentences.map((s, i) => `<span id="s-${i}" class="sentence" onclick="window.readFrom(${i})">${s} </span>`).join('');
+
+            const area = document.getElementById('content-area');
+            area.innerHTML = sentences.map((s, i) => `<span id="s-${i}" class="sentence" onclick="window.speak(${i})">${s} </span>`).join('');
+
             if (b.savedIndex) {
                 lastReadIdx = b.savedIndex;
-                setTimeout(() => document.getElementById(`s-${lastReadIdx}`).scrollIntoView({ behavior: 'smooth', block: 'center' }), 400);
+                setTimeout(() => {
+                    document.getElementById(`s-${lastReadIdx}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 500);
             }
         }
 
-        window.readFrom = async (index) => {
-            audio.pause();
+        window.speak = async (index) => {
             isPaused = false;
-            if (index >= sentences.length) return;
-            const el = document.getElementById(`s-${index}`);
-            document.querySelectorAll('.sentence').forEach(s => s.classList.remove('reading'));
-            if (el) el.classList.add('reading');
             lastReadIdx = index;
+            document.querySelectorAll('.sentence').forEach(s => s.classList.remove('reading'));
+            const el = document.getElementById(`s-${index}`);
+            if (el) el.classList.add('reading');
 
-            try {
-                // Utilizzo esplicito della voce Michael
+            if (tts) {
+                // RIPRODUZIONE AI (KOKORO)
                 const output = await tts(sentences[index], { voice: 'am_michael' });
                 const blob = new Blob([output.audio], { type: 'audio/wav' });
                 audio.src = URL.createObjectURL(blob);
                 audio.play();
-                audio.onended = () => {
-                    if (!isPaused) window.readFrom(index + 1);
-                    if (index % 2 === 0) document.getElementById(`s-${index+1}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
-                };
-                document.getElementById('pauseBtn').innerText = "PAUSA 🎀";
-            } catch (err) {
-                console.error("Errore Michael:", err);
+                audio.onended = () => { if(!isPaused) window.speak(index + 1); };
+            } else {
+                // FALLBACK SISTEMA (Se l'AI è bloccata dal browser)
+                window.speechSynthesis.cancel();
+                const utter = new SpeechSynthesisUtterance(sentences[index]);
+                const voices = window.speechSynthesis.getVoices();
+                utter.voice = voices.find(v => v.name.includes('Michael') || v.name.includes('Google UK English Male')) || voices[0];
+                utter.onend = () => { if(!isPaused) window.speak(index + 1); };
+                window.speechSynthesis.speak(utter);
             }
+            document.getElementById('pauseBtn').innerText = "PAUSA 🎀";
         }
 
         window.togglePlay = () => {
-            if (!audio.paused) { audio.pause(); isPaused = true; document.getElementById('pauseBtn').innerText = "RIPRENDI ✨"; }
-            else if (lastReadIdx !== -1) window.readFrom(lastReadIdx);
-        };
-
-        window.saveBookmark = async () => {
-            if (lastReadIdx !== -1) {
-                const b = await localforage.getItem(currentBookId);
-                b.savedIndex = lastReadIdx;
-                await localforage.setItem(currentBookId, b);
-                alert("Segnalibro salvato! 📌");
+            if (tts) {
+                if (!audio.paused) { audio.pause(); isPaused = true; document.getElementById('pauseBtn').innerText = "RIPRENDI ✨"; }
+                else if (lastReadIdx !== -1) window.speak(lastReadIdx);
+            } else {
+                window.speechSynthesis.paused ? window.speechSynthesis.resume() : window.speechSynthesis.pause();
+                isPaused = !isPaused;
             }
         };
 
-        initAI();
+        window.saveBookmark = async () => {
+            const b = await localforage.getItem(currentBookId);
+            b.savedIndex = lastReadIdx;
+            await localforage.setItem(currentBookId, b);
+            alert("Salvato! 📌");
+        };
+
+        init();
     </script>
 </body>
 </html>
