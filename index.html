@@ -3,127 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Il Mio Lettore Magico 🎀</title>
+    <title>Magical Book Reader 🎀</title>
     <script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
     <style>
         :root { 
-            --bg: #fff0f6; /* Rosa pastello chiarissimo */
-            --text: #ad1457; /* Rosa scuro per il testo */
-            --accent: #ff85a2; /* Rosa per i dettagli */
-            --btn-play: #ffb3c6; 
-            --btn-sec: #ffc2d1;
+            --bg: #fff0f6; 
+            --text: #70133a; 
+            --accent: #ff85a2; 
+            --btn-pink: #ffc2d1;
+            --btn-save: #b2f2bb;
         }
         
         body { 
-            font-family: 'Segoe UI', cursive, sans-serif; 
+            font-family: 'Segoe UI', sans-serif; 
             margin: 0; 
             background: var(--bg); 
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 100 100'%3E%3Ctext y='30' x='10' font-size='18' opacity='0.3'%3E✨%3C/text%3E%3Ctext y='70' x='60' font-size='18' opacity='0.3'%3E🎀%3C/text%3E%3C/svg%3E");
             color: var(--text);
-            /* Sfondo con stelline e fiocchetti (emoji) */
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Ctext y='30' x='10' font-size='20'%3E✨%3C/text%3E%3Ctext y='80' x='60' font-size='20'%3E🎀%3C/text%3E%3C/svg%3E");
         }
         
         /* Libreria */
         #library-view { padding: 20px; text-align: center; }
-        h1 { font-size: 1.8em; text-shadow: 1px 1px white; }
-        #library { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; margin-top: 20px; }
+        #library { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; max-width: 800px; margin: 20px auto; }
         
         .book-item { 
-            background: rgba(255, 255, 255, 0.7); 
-            padding: 20px; 
-            border-radius: 20px; 
-            position: relative; 
-            cursor: pointer; 
-            border: 2px solid var(--accent);
-            box-shadow: 0 4px 10px rgba(255, 133, 162, 0.2);
-        }
-        
-        .delete-btn { 
-            position: absolute; top: -5px; right: -5px; 
-            background: #ff4d6d; color: white; border: none; 
-            border-radius: 50%; width: 30px; height: 30px; 
-            font-weight: bold; cursor: pointer;
+            background: rgba(255, 255, 255, 0.6); 
+            padding: 15px; border-radius: 15px; position: relative; 
+            border: 2px solid var(--accent); cursor: pointer;
         }
         
         /* Lettore */
-        #reader-view { display: none; padding: 20px; padding-bottom: 280px; }
+        #reader-view { display: none; padding: 10px; padding-bottom: 220px; }
         
-        /* TESTO MOLTO GRANDE */
+        /* CONTENITORE LIBRO (Trasparente e Leggibile) */
         #content-area { 
-            max-width: 650px; 
+            max-width: 600px; 
             margin: 0 auto; 
-            line-height: 1.6; 
-            font-size: 1.5em; /* Ingrandito come richiesto */
-            font-weight: 500;
+            line-height: 1.7; 
+            font-size: 1.3em; 
+            font-family: 'Georgia', 'Times New Roman', serif; /* Font da libro vero */
+            background: rgba(255, 240, 246, 0.7); /* Effetto vetro rosa */
+            padding: 20px;
+            border-radius: 20px;
         }
         
-        .sentence { 
-            display: inline; cursor: pointer; padding: 4px; border-radius: 10px; transition: 0.3s; 
-        }
+        .sentence { display: inline; cursor: pointer; padding: 2px 4px; border-radius: 6px; }
+        .reading { background: #ffdeeb; box-shadow: 0 0 8px #ffb3c6; border-bottom: 2px solid #ff477e; }
         
-        .reading { 
-            background: #ffdeeb; 
-            color: #880e4f; 
-            box-shadow: 0 0 10px #ffb3c6;
-            border-bottom: 3px solid #ff477e;
-        }
-        
-        /* CONTROLLI DRIVING MODE (Più compatti ma giganti) */
+        /* BOTTONI (Più piccoli e larghi come il testo) */
         #controls { 
             position: fixed; bottom: 0; left: 0; right: 0; 
             background: rgba(255, 255, 255, 0.9); 
-            padding: 15px; 
-            box-shadow: 0 -10px 25px rgba(255, 133, 162, 0.3); 
-            z-index: 1000; 
-            border-radius: 30px 30px 0 0; 
-            backdrop-filter: blur(5px);
+            padding: 15px; z-index: 1000;
+            border-radius: 25px 25px 0 0;
+            display: flex; flex-direction: column; align-items: center;
+            gap: 10px;
         }
         
-        .main-btns { display: flex; gap: 10px; height: 100px; }
+        .btn-row { width: 100%; max-width: 600px; display: flex; gap: 10px; }
         
-        .big-btn { 
-            flex: 1; border-radius: 25px; border: 3px solid white; 
-            color: var(--text); font-weight: 900; font-size: 20px; 
-            text-transform: uppercase; cursor: pointer;
-            box-shadow: 0 4px 0 var(--accent);
-        }
-        
-        .big-btn:active { transform: translateY(4px); box-shadow: none; }
-        
-        #pauseBtn { background: var(--btn-play); }
-        #markBtn { background: var(--btn-sec); }
-        
-        .back-link { 
-            display: block; margin-bottom: 15px; color: var(--text); 
-            text-decoration: none; font-weight: bold; text-align: center;
-            font-size: 1.1em;
+        .ui-btn { 
+            flex: 1; padding: 15px; border-radius: 15px; border: 2px solid white;
+            font-weight: bold; font-size: 16px; cursor: pointer;
+            box-shadow: 0 3px 0 var(--accent); text-transform: uppercase;
         }
 
+        #backBtn { background: var(--btn-pink); color: var(--text); width: 100%; max-width: 600px; }
+        #markBtn { background: #e3f2fd; color: #1976d2; }
+        #pauseBtn { background: var(--btn-pink); color: var(--text); }
+        
         .add-btn {
-            position: fixed; bottom: 30px; right: 30px; width: 70px; height: 70px; 
-            border-radius: 50%; font-size: 40px; background: var(--accent); 
-            border: 4px solid white; color: white; cursor: pointer;
-            box-shadow: 0 4px 15px rgba(255, 133, 162, 0.4);
+            position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; 
+            border-radius: 50%; font-size: 30px; background: var(--accent); 
+            border: 3px solid white; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .delete-btn {
+            position: absolute; top: -8px; right: -8px; background: #ff4d6d;
+            color: white; border: none; border-radius: 50%; width: 25px; height: 25px;
         }
     </style>
 </head>
 <body>
 
     <div id="library-view">
-        <h1>✨ Le Mie Storie 🎀</h1>
+        <h1>✨ My Stories 🎀</h1>
         <div id="library"></div>
         <button class="add-btn" onclick="document.getElementById('fileInput').click()">+</button>
         <input type="file" id="fileInput" style="display:none" accept=".html" onchange="importFile(event)">
     </div>
 
     <div id="reader-view">
-        <a href="#" class="back-link" onclick="location.reload()">⬅ Torna ai Libri ✨</a>
         <div id="content-area"></div>
         
         <div id="controls">
-            <div class="main-btns">
-                <button id="markBtn" class="big-btn" onclick="saveBookmark()">📌 SEGNA</button>
-                <button id="pauseBtn" class="big-btn" onclick="togglePlay()">PAUSA</button>
+            <button id="backBtn" class="ui-btn" onclick="location.reload()">⬅ TORNA ALLA LIBRERIA ✨</button>
+            <div class="btn-row">
+                <button id="markBtn" class="ui-btn" onclick="saveBookmark()">📌 SEGNA</button>
+                <button id="pauseBtn" class="ui-btn" onclick="togglePlay()">PAUSA 🎀</button>
             </div>
         </div>
     </div>
@@ -153,18 +130,15 @@
                     const b = await localforage.getItem(k);
                     lib.innerHTML += `
                         <div class="book-item" onclick="openBook('${b.id}')">
-                            <button class="delete-btn" onclick="event.stopPropagation(); deleteBook('${b.id}')">X</button>
-                            🎀<br><small>${b.title}</small>
+                            <button class="delete-btn" onclick="event.stopPropagation(); deleteBook('${b.id}')">×</button>
+                            📖<br><small>${b.title}</small>
                         </div>`;
                 }
             }
         }
 
         async function deleteBook(id) {
-            if(confirm("Vuoi davvero eliminare questo libro? ✨")) { 
-                await localforage.removeItem(id); 
-                renderLibrary(); 
-            }
+            if(confirm("Eliminare il libro? ✨")) { await localforage.removeItem(id); renderLibrary(); }
         }
 
         async function openBook(id) {
@@ -177,7 +151,6 @@
             const doc = parser.parseFromString(b.content, 'text/html');
             const fullText = doc.body.innerText;
             
-            // SPLIT PER FRASI
             sentences = fullText.match(/[^.!?]+[.!?]+|\n/g) || [fullText];
             sentences = sentences.map(s => s.trim()).filter(s => s.length > 1);
 
@@ -187,7 +160,10 @@
             if (b.savedIndex) {
                 lastReadIdx = b.savedIndex;
                 const el = document.getElementById(`s-${lastReadIdx}`);
-                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // Non auto-partire per evitare spaventi in auto, l'utente clicca pausa/play
+                }
             }
         }
 
@@ -201,7 +177,6 @@
             lastReadIdx = index;
 
             const utter = new SpeechSynthesisUtterance(sentences[index]);
-            // Usa la voce predefinita del sistema (quella che hai scelto tu)
             utter.lang = 'it-IT';
             
             utter.onend = () => {
@@ -226,6 +201,8 @@
                 document.getElementById('pauseBtn').innerText = "RIPRENDI ✨";
             } else if (lastReadIdx !== -1) {
                 readSentence(lastReadIdx);
+            } else {
+                readSentence(0);
             }
         }
 
@@ -234,7 +211,7 @@
                 const b = await localforage.getItem(currentBookId);
                 b.savedIndex = lastReadIdx;
                 await localforage.setItem(currentBookId, b);
-                alert("Posizione salvata! ✨🎀");
+                alert("Posizione salvata! 📌✨");
             }
         }
 
