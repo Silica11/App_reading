@@ -45,7 +45,7 @@
         <select id="voiceSelect"><option>Caricamento voci...</option></select>
     </div>
 
-    <script>
+   <script>
         let currentBook = null;
         let rendition = null;
         let speech = window.speechSynthesis;
@@ -56,104 +56,145 @@
         function loadVoices() {
             const voices = speech.getVoices();
             const select = document.getElementById('voiceSelect');
-            select.innerHTML = voices
-                .filter(v => v.lang.includes('it') || v.lang.includes('en'))
-                .map(v => `<option value="${v.name}">${v.name} (${v.lang})</option>`).join('');
+            const itEnVoices = voices.filter(v => v.lang.includes('it') || v.lang.includes('en'));
+            
+            if(itEnVoices.length > 0) {
+                select.innerHTML = itEnVoices
+                    .map(v => `<option value="${v.name}">${v.name} (${v.lang})</option>`).join('');
+            }
         }
         speech.onvoiceschanged = loadVoices;
+        loadVoices();
 
-        // Gestione Caricamento Libro
+        // GESTIONE CARICAMENTO LIBRO (Versione Migliorata)
         async function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
 
+            document.getElementById('library').insertAdjacentHTML('afterbegin', '<div id="loading">Caricamento in corso...</div>');
+
             const reader = new FileReader();
             reader.onload = async (e) => {
-                const arrayBuffer = e.target.result;
-                const book = ePub(arrayBuffer);
-                const metadata = await book.loaded.metadata;
-                const coverUrl = await book.coverUrl();
+                try {
+                    const arrayBuffer = e.target.result;
+                    const book = ePub(arrayBuffer);
+                    
+                    // Aspettiamo i metadati con un timeout per sicurezza
+                    const metadata = await book.loaded.metadata;
+                    let coverUrl = "";
+                    
+                    try {
+                        coverUrl = await book.coverUrl();
+                    } catch (err) {
+                        console.log("Copertina non trovata");
+                        coverUrl = "https://via.placeholder.com/150?text=Nessuna+Copertina";
+                    }
 
-                const bookData = {
-                    id: Date.now(),
-                    title: metadata.title,
-                    cover: coverUrl,
-                    content: arrayBuffer,
-                    cfi: '' // Posizione salvata
-                };
+                    const bookData = {
+                        id: "book_" + Date.now(),
+                        title: metadata.title || file.name,
+                        cover: coverUrl,
+                        content: arrayBuffer,
+                        cfi: ''
+                    };
 
-                await localforage.setItem('book_' + bookData.id, bookData);
-                renderLibrary();
+                    await localforage.setItem(bookData.id, bookData);
+                    console.log("Libro salvato con successo!");
+                    renderLibrary();
+                } catch (error) {
+                    console.error("Errore nel caricamento:", error);
+                    alert("Errore nel leggere questo ePub. Assicurati che non sia protetto da DRM.");
+                } finally {
+                    const loader = document.getElementById('loading');
+                    if(loader) loader.remove();
+                }
             };
             reader.readAsArrayBuffer(file);
         }
 
-        // Mostra i libri salvati
+        // MOSTRA I LIBRI
         async function renderLibrary() {
             const lib = document.getElementById('library');
             lib.innerHTML = '';
-            const keys = await localforage.keys();
             
-            for (let key of keys) {
-                if (key.startsWith('book_')) {
+            try {
+                const keys = await localforage.keys();
+                const bookKeys = keys.filter(k => k.startsWith('book_'));
+
+                if (bookKeys.length === 0) {
+                    lib.innerHTML = '<p style="padding:20px; color:#666;">La tua libreria è vuota. Clicca sul + per aggiungere un libro.</p>';
+                    return;
+                }
+
+                for (let key of bookKeys) {
                     const book = await localforage.getItem(key);
                     const div = document.createElement('div');
                     div.className = 'book-card';
                     div.onclick = () => openBook(book);
                     div.innerHTML = `
-                        <img src="${book.cover || 'https://via.placeholder.com/150'}" alt="cover">
+                        <img src="${book.cover || 'https://via.placeholder.com/150'}" onerror="this.src='https://via.placeholder.com/150'">
                         <p>${book.title}</p>
                     `;
                     lib.appendChild(div);
                 }
+            } catch (err) {
+                console.error("Errore nel caricamento libreria:", err);
             }
         }
 
-        // Apri il libro nel player
+        // APERTURA LIBRO
         async function openBook(bookData) {
             document.getElementById('player').style.display = 'block';
-            document.getElementById('now-playing').innerText = "In lettura: " + bookData.title;
-            currentBook = ePub(bookData.content);
-            rendition = currentBook.renderTo(document.createElement('div')); // Render invisibile
+            document.getElementById('now-playing').innerText = "Caricamento: " + bookData.title;
             
-            // Se c'è un segnalibro, caricalo
-            const savedCfi = bookData.cfi;
-            if (savedCfi) {
-                await rendition.display(savedCfi);
-            } else {
-                await rendition.display();
+            if (currentBook) {
+                currentBook.destroy();
             }
+
+            currentBook = ePub(bookData.content);
+            const viewer = document.createElement('div'); // Contenitore temporaneo
+            rendition = currentBook.renderTo(viewer, { width: "100%", height: "100%" });
             
-            window.currentBookData = bookData;
+            await rendition.display(bookData.cfi || undefined);
+            document.getElementById('now-playing').innerText = "Pronto: " + bookData.title;
+            window.currentBookId = bookData.id;
         }
 
-        // Funzione Play/Pausa
+        // RIPRODUZIONE AUDIO
         async function togglePlay() {
             if (isReading) {
                 speech.pause();
                 document.getElementById('playBtn').innerText = "Riprendi";
                 isReading = false;
             } else {
-                if (speech.paused) {
+                if (speech.paused && speech.speaking) {
                     speech.resume();
                 } else {
-                    readVisibleText();
+                    await readChapter();
                 }
                 document.getElementById('playBtn').innerText = "Pausa";
                 isReading = true;
             }
         }
 
-        async function readVisibleText() {
-            const section = rendition.currentLocation().start;
-            const text = await currentBook.load(section.href).then(doc => doc.body.innerText);
+        async function readChapter() {
+            speech.cancel();
             
-            // Pulizia testo e invio a sintesi vocale
-            utterance.text = text.substring(0, 5000); // Legge blocchi di testo
+            // Otteniamo il testo del capitolo corrente
+            const location = rendition.currentLocation();
+            const section = currentBook.spine.get(location.start.cfi);
+            const doc = await section.load(currentBook.load.bind(currentBook));
+            const text = doc.body.innerText;
+
+            // Pulizia base del testo
+            const cleanText = text.replace(/\s+/g, ' ').trim();
+            
+            utterance = new SpeechSynthesisUtterance(cleanText);
             const selectedVoice = document.getElementById('voiceSelect').value;
             utterance.voice = speech.getVoices().find(v => v.name === selectedVoice);
-            utterance.lang = utterance.voice.lang;
-            
+            utterance.lang = utterance.voice ? utterance.voice.lang : 'it-IT';
+            utterance.rate = 1.0;
+
             speech.speak(utterance);
         }
 
@@ -164,13 +205,17 @@
         }
 
         async function saveBookmark() {
+            if (!window.currentBookId) return;
             const cfi = rendition.currentLocation().start.cfi;
-            window.currentBookData.cfi = cfi;
-            await localforage.setItem('book_' + window.currentBookData.id, window.currentBookData);
-            alert("Posizione salvata con successo!");
+            const bookData = await localforage.getItem(window.currentBookId);
+            bookData.cfi = cfi;
+            await localforage.setItem(window.currentBookId, bookData);
+            alert("Posizione salvata!");
         }
 
+        // Carica la libreria all'avvio
         renderLibrary();
     </script>
+ 
 </body>
 </html>
