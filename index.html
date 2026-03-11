@@ -3,37 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lettore Driving Mode</title>
+    <title>Lettore Granulare Driving Mode</title>
     <script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
     <style>
         :root { --bg: #121212; --text: #e0e0e0; --accent: #ff4757; --btn-play: #2ed573; --btn-sec: #1e90ff; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; background: var(--bg); color: var(--text); }
         
-        /* Libreria */
         #library-view { padding: 20px; text-align: center; }
         #library { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; margin-top: 20px; }
         .book-item { background: #1e1e1e; padding: 20px; border-radius: 15px; position: relative; cursor: pointer; border: 1px solid #333; }
-        .delete-btn { position: absolute; top: -5px; right: -5px; background: var(--accent); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; font-weight: bold; cursor: pointer; }
+        .delete-btn { position: absolute; top: -5px; right: -5px; background: var(--accent); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; font-weight: bold; }
         
-        /* Lettore */
-        #reader-view { display: none; padding: 20px; padding-bottom: 300px; }
-        #content-area { max-width: 600px; margin: 0 auto; line-height: 1.6; font-size: 1.2em; }
-        #content-area p { padding: 15px; border-radius: 10px; margin: 10px 0; background: #1e1e1e; }
-        #content-area p.reading { background: #333; border-left: 8px solid var(--btn-play); color: #fff; }
+        #reader-view { display: none; padding: 20px; padding-bottom: 320px; }
+        #content-area { max-width: 650px; margin: 0 auto; line-height: 1.5; font-size: 1.1em; }
         
-        /* CONTROLLI GIGANTI (DRIVING MODE) */
+        /* Stile Frasi (Più piccole e cliccabili) */
+        .sentence { display: inline; cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: 0.2s; }
+        .sentence:hover { background: rgba(255,255,255,0.1); }
+        .reading { background: #444; color: #fff; border-bottom: 3px solid var(--btn-play); font-weight: bold; }
+        
         #controls { position: fixed; bottom: 0; left: 0; right: 0; background: #1a1a1a; padding: 20px; box-shadow: 0 -10px 30px rgba(0,0,0,0.5); z-index: 1000; border-radius: 30px 30px 0 0; }
-        .driving-btns { display: flex; flex-direction: column; gap: 15px; }
-        .main-btns { display: flex; gap: 15px; height: 120px; } /* Altezza maggiorata per l'auto */
-        
-        .big-btn { flex: 1; border-radius: 20px; border: none; color: white; font-weight: 800; font-size: 24px; cursor: pointer; text-transform: uppercase; box-shadow: 0 6px 0 rgba(0,0,0,0.2); }
-        .big-btn:active { transform: translateY(4px); box-shadow: none; }
-        
+        .main-btns { display: flex; gap: 15px; height: 120px; margin-top: 10px; }
+        .big-btn { flex: 1; border-radius: 20px; border: none; color: white; font-weight: 800; font-size: 24px; text-transform: uppercase; }
         #pauseBtn { background: var(--btn-play); }
         #markBtn { background: var(--btn-sec); }
         
-        select { width: 100%; padding: 15px; border-radius: 12px; background: #222; color: white; border: 1px solid #444; margin-bottom: 15px; font-size: 16px; }
-        .back-link { display: block; margin-bottom: 30px; color: #aaa; text-decoration: none; font-weight: bold; font-size: 1.2em; text-align: center; }
+        select { width: 100%; padding: 15px; border-radius: 12px; background: #222; color: white; border: 1px solid #444; font-size: 16px; }
+        .back-link { display: block; margin-bottom: 20px; color: #aaa; text-decoration: none; font-weight: bold; text-align: center; }
     </style>
 </head>
 <body>
@@ -42,20 +38,18 @@
         <h1>🚗 Audio Libreria</h1>
         <div id="library"></div>
         <button style="position:fixed; bottom:30px; right:30px; width:70px; height:70px; border-radius:50%; font-size:40px; background:var(--btn-play); border:none; color:white;" onclick="document.getElementById('fileInput').click()">+</button>
-        <input type="file" id="fileInput" style="display:none" accept=".html,.htm,.txt" onchange="importFile(event)">
+        <input type="file" id="fileInput" style="display:none" accept=".html" onchange="importFile(event)">
     </div>
 
     <div id="reader-view">
-        <a href="#" class="back-link" onclick="location.reload()">⬅ ESCI DAL LIBRO</a>
+        <a href="#" class="back-link" onclick="location.reload()">⬅ ESCI</a>
         <div id="content-area"></div>
         
         <div id="controls">
-            <select id="voiceSelect"></select>
-            <div class="driving-btns">
-                <div class="main-btns">
-                    <button id="markBtn" class="big-btn" onclick="saveBookmark()">📌 SEGNA</button>
-                    <button id="pauseBtn" class="big-btn" onclick="togglePlay()">PAUSA</button>
-                </div>
+            <select id="voiceSelect" onchange="stopSpeech()"></select>
+            <div class="main-btns">
+                <button id="markBtn" class="big-btn" onclick="saveBookmark()">📌 SEGNA</button>
+                <button id="pauseBtn" class="big-btn" onclick="togglePlay()">PAUSA</button>
             </div>
         </div>
     </div>
@@ -63,17 +57,21 @@
     <script>
         const synth = window.speechSynthesis;
         let currentBookId = null;
-        let lastReadPara = null;
+        let lastReadIdx = -1;
         let isPaused = false;
+        let sentences = [];
 
         function populateVoices() {
-            const voices = synth.getVoices();
+            const allVoices = synth.getVoices();
             const select = document.getElementById('voiceSelect');
-            const filtered = voices.filter(v => v.lang.includes('it') || v.lang.includes('en'));
+            // Filtriamo per italiano e inglese, ma mostriamo tutto se non ne trova
+            let filtered = allVoices.filter(v => v.lang.includes('it') || v.lang.includes('en'));
+            if (filtered.length === 0) filtered = allVoices;
+            
             select.innerHTML = filtered.map(v => `<option value="${v.name}">${v.name} (${v.lang})</option>`).join('');
         }
         speechSynthesis.onvoiceschanged = populateVoices;
-        populateVoices();
+        setTimeout(populateVoices, 500); // Forza caricamento voci
 
         async function importFile(e) {
             const file = e.target.files[0];
@@ -91,23 +89,17 @@
             for (let k of keys) {
                 if (k.startsWith("h_")) {
                     const b = await localforage.getItem(k);
-                    const div = document.createElement('div');
-                    div.className = 'book-item';
-                    div.innerHTML = `
-                        <button class="delete-btn" onclick="event.stopPropagation(); deleteBook('${b.id}')">X</button>
-                        📖<br><small>${b.title}</small>
-                    `;
-                    div.onclick = () => openBook(b.id);
-                    lib.appendChild(div);
+                    lib.innerHTML += `
+                        <div class="book-item" onclick="openBook('${b.id}')">
+                            <button class="delete-btn" onclick="event.stopPropagation(); deleteBook('${b.id}')">X</button>
+                            📖<br><small>${b.title}</small>
+                        </div>`;
                 }
             }
         }
 
         async function deleteBook(id) {
-            if(confirm("Vuoi eliminare questo libro?")) {
-                await localforage.removeItem(id);
-                renderLibrary();
-            }
+            if(confirm("Eliminare il libro?")) { await localforage.removeItem(id); renderLibrary(); }
         }
 
         async function openBook(id) {
@@ -116,39 +108,46 @@
             document.getElementById('library-view').style.display = 'none';
             document.getElementById('reader-view').style.display = 'block';
             
-            const area = document.getElementById('content-area');
             const parser = new DOMParser();
             const doc = parser.parseFromString(b.content, 'text/html');
-            const textContent = doc.body.innerText.split('\n').map(p => p.trim()).filter(p => p.length > 5);
+            const fullText = doc.body.innerText;
             
-            area.innerHTML = textContent.map((p, index) => `<p id="p-${index}" onclick="readParagraph(${index})">${p}</p>`).join('');
+            // SPLIT PER FRASI (Granularità riga per riga)
+            sentences = fullText.match(/[^.!?]+[.!?]+|\n/g) || [fullText];
+            sentences = sentences.map(s => s.trim()).filter(s => s.length > 1);
+
+            const area = document.getElementById('content-area');
+            area.innerHTML = sentences.map((s, i) => `<span id="s-${i}" class="sentence" onclick="readSentence(${i})">${s} </span>`).join('');
 
             if (b.savedIndex) {
-                const el = document.getElementById(`p-${b.savedIndex}`);
-                if (el) {
-                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    readParagraph(b.savedIndex); // Inizia subito dal segnalibro
-                }
+                lastReadIdx = b.savedIndex;
+                const el = document.getElementById(`s-${lastReadIdx}`);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         }
 
-        function readParagraph(index) {
+        function readSentence(index) {
             synth.cancel();
-            const el = document.getElementById(`p-${index}`);
+            const el = document.getElementById(`s-${index}`);
             if (!el) return;
 
-            if (lastReadPara) lastReadPara.classList.remove('reading');
+            // Rimuovi vecchia evidenziazione
+            document.querySelectorAll('.sentence').forEach(s => s.classList.remove('reading'));
             el.classList.add('reading');
-            lastReadPara = el;
-            lastReadPara.index = index;
+            lastReadIdx = index;
 
-            const utter = new SpeechSynthesisUtterance(el.innerText);
-            const selectedVoiceName = document.getElementById('voiceSelect').value;
-            utter.voice = synth.getVoices().find(v => v.name === selectedVoiceName);
+            const utter = new SpeechSynthesisUtterance(sentences[index]);
+            const voiceName = document.getElementById('voiceSelect').value;
+            utter.voice = synth.getVoices().find(v => v.name === voiceName);
             
             utter.onend = () => {
-                if(!isPaused) readParagraph(index + 1);
-                document.getElementById(`p-${index+1}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
+                if(!isPaused) {
+                    const next = index + 1;
+                    if (sentences[next]) {
+                        readSentence(next);
+                        if (next % 3 === 0) document.getElementById(`s-${next}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
             };
 
             synth.speak(utter);
@@ -163,15 +162,17 @@
                 isPaused = true;
                 document.getElementById('pauseBtn').innerText = "RIPRENDI";
                 document.getElementById('pauseBtn').style.background = "#2ed573";
-            } else if (lastReadPara) {
-                readParagraph(lastReadPara.index);
+            } else if (lastReadIdx !== -1) {
+                readSentence(lastReadIdx);
             }
         }
 
+        function stopSpeech() { synth.cancel(); isPaused = true; }
+
         async function saveBookmark() {
-            if (lastReadPara && currentBookId) {
+            if (lastReadIdx !== -1 && currentBookId) {
                 const b = await localforage.getItem(currentBookId);
-                b.savedIndex = lastReadPara.index;
+                b.savedIndex = lastReadIdx;
                 await localforage.setItem(currentBookId, b);
                 const btn = document.getElementById('markBtn');
                 btn.innerText = "SALVATO!";
