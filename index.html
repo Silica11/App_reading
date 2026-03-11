@@ -127,11 +127,15 @@
                     div.style.backgroundImage = `url(${b.cover})`;
                 }
 
-                div.innerHTML = `
-                    <button class="delete-btn" onclick="event.stopPropagation(); deleteBook('${b.id}')">X</button>
-                    <div style="background:rgba(255,255,255,0.8); width:100%; padding:5px; border-radius:10px; font-size:0.8em;">
-                        ${b.cover ? '' : '📖<br>'}${b.title}
-                    </div>`;
+                // Questo pezzo va dentro il ciclo for di renderLibrary
+div.innerHTML = `
+    <button class="delete-btn" onclick="event.stopPropagation(); deleteBook('${b.id}')">X</button>
+    ${b.cover ? '' : `
+        <div style="background:rgba(255,255,255,0.8); width:100%; padding:10px; border-radius:10px; font-size:0.9em; font-weight:bold; color:var(--text);">
+            📖<br>${b.title.replace('.html', '').replace('.HTML', '')}
+        </div>
+    `}
+`;
                 
                 div.onclick = () => openBook(b.id);
                 lib.appendChild(div);
