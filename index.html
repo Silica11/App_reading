@@ -19,8 +19,14 @@
         /* LIBRERIA */
         #library-view { padding: 20px; text-align: center; }
         #library { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
-        .book-item { background: rgba(255, 255, 255, 0.7); padding: 15px; border-radius: 15px; position: relative; border: 2px solid var(--accent); }
-        .delete-btn { position: absolute; top: -5px; right: -5px; background: #ff4d6d; color: white; border: none; border-radius: 50%; width: 25px; height: 25px; font-weight: bold; }
+        /* Aggiunto supporto per immagine di sfondo nella cella */
+        .book-item { 
+            background: rgba(255, 255, 255, 0.7); 
+            padding: 15px; border-radius: 15px; position: relative; border: 2px solid var(--accent); 
+            background-size: cover; background-position: center; height: 160px;
+            display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
+        }
+        .delete-btn { position: absolute; top: -5px; right: -5px; background: #ff4d6d; color: white; border: none; border-radius: 50%; width: 25px; height: 25px; font-weight: bold; z-index: 10; }
         
         /* TASTO + (Il tuo originale) */
         .add-btn { position: fixed; bottom: 30px; right: 30px; width: 70px; height: 70px; border-radius: 50%; font-size: 40px; background: var(--accent); border: 4px solid white; color: white; cursor: pointer; z-index: 2000; }
@@ -46,7 +52,11 @@
             cursor: pointer; color: var(--text); display: flex; align-items: center; justify-content: center;
         }
 
-        #backBtn { height: 100px; background: #fff; font-size: 22px; border-bottom: 3px solid var(--bg); }
+        /* Diviso il tasto back per fare spazio alla foto, mantenendo i 100px totali */
+        .top-row { display: flex; width: 100%; height: 100px; border-bottom: 3px solid var(--bg); }
+        #backBtn { height: 100%; flex: 1; background: #fff; font-size: 20px; border-right: 2px solid var(--bg); }
+        #coverBtn { height: 100%; flex: 1; background: #fff; font-size: 20px; }
+
         #markBtn { height: 150px; background: #e3f2fd; color: #1976d2; font-size: 22px; border-bottom: 5px solid var(--bg); }
         #pauseBtn { height: 150px; background: var(--btn-pink); font-size: 22px; }
     </style>
@@ -63,7 +73,11 @@
     <div id="reader-view">
         <div id="content-area"></div>
         <div id="controls">
-            <button id="backBtn" class="ui-btn" onclick="location.reload()">⬅ LIBRERIA ✨</button>
+            <div class="top-row">
+                <button id="backBtn" class="ui-btn" onclick="location.reload()">⬅ LIBRERIA</button>
+                <button id="coverBtn" class="ui-btn" onclick="document.getElementById('coverInput').click()">🖼️ FOTO ✨</button>
+            </div>
+            <input type="file" id="coverInput" style="display:none" accept="image/*" onchange="uploadCover(event)">
             <button id="markBtn" class="ui-btn" onclick="saveBookmark()">📌 SEGNA POSIZIONE</button>
             <button id="pauseBtn" class="ui-btn" onclick="togglePlay()">PAUSA / PLAY 🎀</button>
         </div>
@@ -82,7 +96,7 @@
             if (!file) return;
             const text = await file.text();
             const id = "h_" + Date.now();
-            await localforage.setItem(id, { id, title: file.name.replace('.html',''), content: text, savedIndex: 0 });
+            await localforage.setItem(id, { id, title: file.name.replace('.html',''), content: text, savedIndex: 0, cover: null });
             renderLibrary();
         }
 
@@ -96,10 +110,35 @@
                 const b = await localforage.getItem(k);
                 const div = document.createElement('div');
                 div.className = 'book-item';
-                div.innerHTML = `<button class="delete-btn" onclick="event.stopPropagation(); deleteBook('${b.id}')">X</button>📖<br><small>${b.title}</small>`;
+                
+                // Se c'è una copertina, la imposta come sfondo
+                if (b.cover) {
+                    div.style.backgroundImage = `url(${b.cover})`;
+                }
+
+                div.innerHTML = `
+                    <button class="delete-btn" onclick="event.stopPropagation(); deleteBook('${b.id}')">X</button>
+                    <div style="background:rgba(255,255,255,0.8); width:100%; padding:5px; border-radius:10px; font-size:0.8em;">
+                        ${b.cover ? '' : '📖<br>'}${b.title}
+                    </div>`;
+                
                 div.onclick = () => openBook(b.id);
                 lib.appendChild(div);
             }
+        }
+
+        // NUOVA FUNZIONE PER CARICARE LA COPERTINA
+        async function uploadCover(e) {
+            const file = e.target.files[0];
+            if (!file || !currentBookId) return;
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                const b = await localforage.getItem(currentBookId);
+                b.cover = event.target.result;
+                await localforage.setItem(currentBookId, b);
+                alert("Copertina salvata! ✨🎀");
+            };
+            reader.readAsDataURL(file);
         }
 
         async function deleteBook(id) {
@@ -136,9 +175,8 @@
 
             const utter = new SpeechSynthesisUtterance(sentences[index]);
             utter.lang = 'it-IT';
-            // Prova a forzare una voce maschile se disponibile
             const voices = synth.getVoices();
-            const maleVoice = voices.find(v => v.lang.includes('it') && (v.name.includes('Male') || v.name.includes('Luca') || v.name.includes('Vittorio')));
+            const maleVoice = voices.find(v => v.lang.includes('it') && (v.name.includes('Male') || v.name.includes('Luca') || v.name.includes('Vittorio') || v.name.toLowerCase().includes('sherpa') || v.name.toLowerCase().includes('riccardo')));
             if (maleVoice) utter.voice = maleVoice;
 
             utter.onend = () => { if(!isPaused) readSentence(index + 1); };
